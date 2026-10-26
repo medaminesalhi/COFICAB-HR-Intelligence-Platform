@@ -1,180 +1,365 @@
 
-<!-- Navigation principale -->
-<nav class="navbar">
-  <div class="navbar-left">
-    <img src="images.png" alt="Logo" class="logo" />
-    <span class="navbar-title">Espace RH</span>
+<!-- ================= BARRE SUPERIEURE ================= -->
+<header class="topbar">
+  <div class="brand">
+    <img src="/images.png" alt="Logo COFICAB" class="brand-logo" />
+
+    <div class="brand-copy">
+      <span class="brand-title">ESPACE RH</span>
+      <span class="brand-subtitle">Talent Intelligence Platform</span>
+    </div>
   </div>
 
-  <div class="navbar-right">
-    <div class="user-info">
-      <div class="user-meta">
-        <span class="user-name">{{ nomUtilisateur }}</span>
-        <span class="user-status">🟢 En ligne</span>
+  <div class="topbar-actions">
+    <div class="user-chip">
+      <div class="user-avatar">{{ initialeUtilisateur }}</div>
+
+      <div class="user-details">
+        <span class="user-name">{{ nomUtilisateur || 'Utilisateur' }}</span>
+        <span class="user-presence">
+          <span class="status-dot"></span>
+          En ligne
+        </span>
       </div>
     </div>
 
     <button
       type="button"
       class="logout-btn"
-      (click)="deconnexion()">
-      Déconnexion
+      (click)="deconnexion()"
+      aria-label="Se déconnecter">
+
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M10 17l5-5-5-5M15 12H3m9-7h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+      </svg>
+
+      <span>Déconnexion</span>
     </button>
   </div>
-</nav>
+</header>
 
-<!-- Structure du Dashboard -->
-<div class="dashboard-container">
+<!-- ================= STRUCTURE DU DASHBOARD ================= -->
+<div class="dashboard-shell">
 
-  <!-- Menu latéral -->
+  <!-- BARRE LATERALE -->
   <aside class="sidebar">
-    <ul>
-      <li>
-        <i class="icon">📊</i>
-        Tableau de bord
-      </li>
 
-      <li>
-        <i class="icon">🔍</i>
-        <a [routerLink]="['/recherche']">
-          Recherche profils
-        </a>
-      </li>
+    <div class="sidebar-section-label">ESPACE DE TRAVAIL</div>
 
-      <li>
-        <i class="icon">📁</i>
-        Profils trouvés
-      </li>
+    <nav class="side-nav" aria-label="Navigation principale">
 
-      <li>
-        <i class="icon">📨</i>
-        <a [routerLink]="['/import-cv']">
-          Import CV
-        </a>
-      </li>
+      <!-- Tableau de bord -->
+      <a
+        class="nav-link"
+        routerLink="/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }">
 
-      <li>
-        <i class="icon">📈</i>
-        Statistiques RH
-      </li>
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="8" rx="1.5"
+            fill="none" stroke="currentColor" stroke-width="1.7"/>
+          <rect x="14" y="3" width="7" height="5" rx="1.5"
+            fill="none" stroke="currentColor" stroke-width="1.7"/>
+          <rect x="14" y="11" width="7" height="10" rx="1.5"
+            fill="none" stroke="currentColor" stroke-width="1.7"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"
+            fill="none" stroke="currentColor" stroke-width="1.7"/>
+        </svg>
 
-      <li>
-        <i class="icon">💬</i>
-        Feedback IA
-      </li>
-    </ul>
-  </aside>
+        <span class="nav-label">Tableau de bord</span>
+        <span class="nav-indicator"></span>
+      </a>
 
-  <!-- Contenu principal -->
-  <main class="main-content">
+      <!-- Recherche profils -->
+      <a
+        class="nav-link"
+        routerLink="/recherche"
+        routerLinkActive="active">
 
-    <!-- Indicateurs RH -->
-    <div class="widgets">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="10.8" cy="10.8" r="6.8"
+            fill="none" stroke="currentColor" stroke-width="1.8"/>
+          <path d="m16 16 4.5 4.5"
+            fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round"/>
+        </svg>
 
-      <div class="card shadow">
-        <h3>📥 Profils importés</h3>
-        <p class="value">{{ totalProfils }}</p>
+        <span class="nav-label">Recherche profils</span>
+        <span class="nav-indicator"></span>
+      </a>
+
+      <!-- Import CV -->
+      <a
+        class="nav-link"
+        routerLink="/import-cv"
+        routerLinkActive="active">
+
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 15V3m-4 4 4-4 4 4"
+            fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"
+            fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round"/>
+        </svg>
+
+        <span class="nav-label">Import CV</span>
+        <span class="nav-indicator"></span>
+      </a>
+
+    </nav>
+
+    <!-- Signature de la plateforme -->
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3 4 7v5c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7l-8-4Z"
+            fill="none" stroke="currentColor" stroke-width="1.6"
+            stroke-linejoin="round"/>
+          <path d="m8.5 12 2.2 2.2 4.8-5"
+            fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
       </div>
 
-      <div class="card shadow">
-        <h3>✅ Profils recommandés</h3>
-        <p class="value">{{ nbRecommandes }}</p>
+      <div class="sidebar-footer-copy">
+        <strong>COFICAB HR</strong>
+        <span>Recruitment Intelligence</span>
       </div>
-
-      <div class="card shadow">
-        <h3>📌 Derniers ajouts</h3>
-
-        <ul class="mini-list">
-          <li *ngFor="let p of nouveauxProfils">
-            {{ p.fullname }} – {{ p.jobtitle }}
-            (score : {{ p.score | number:'1.0-2' }})
-          </li>
-        </ul>
-      </div>
-
-      <div class="card shadow">
-        <h3>📈 Score moyen IA</h3>
-        <p class="value">{{ moyenneScore }}%</p>
-      </div>
-
     </div>
 
-    <!-- Graphiques : navigateur uniquement -->
+  </aside>
+
+  <!-- CONTENU PRINCIPAL -->
+  <main class="main-content">
+
+    <!-- En-tête de page -->
+    <div class="page-heading">
+      <div>
+        <span class="page-eyebrow">ESPACE RH / ANALYTICS</span>
+        <h1>Vue d'ensemble</h1>
+        <p>Suivez les profils, les recommandations et les tendances de recrutement.</p>
+      </div>
+    </div>
+
+    <!-- INDICATEURS -->
+    <section class="widgets" aria-label="Indicateurs RH">
+
+      <!-- Profils importés -->
+      <article class="metric-card">
+        <div class="metric-heading">
+          <span class="metric-icon metric-icon-blue">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 3h7l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
+                fill="none" stroke="currentColor" stroke-width="1.7"
+                stroke-linejoin="round"/>
+              <path d="M14 3v5h5M9 13h6M9 17h6"
+                fill="none" stroke="currentColor" stroke-width="1.7"
+                stroke-linecap="round"/>
+            </svg>
+          </span>
+          <h2>Profils importés</h2>
+        </div>
+
+        <div class="metric-value">{{ totalProfils | number }}</div>
+        <p class="metric-caption">Total des profils enregistrés</p>
+      </article>
+
+      <!-- Profils recommandés -->
+      <article class="metric-card">
+        <div class="metric-heading">
+          <span class="metric-icon metric-icon-green">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"
+                fill="none" stroke="currentColor" stroke-width="1.7"/>
+              <path d="m8 12 2.6 2.6L16.5 9"
+                fill="none" stroke="currentColor" stroke-width="1.9"
+                stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <h2>Profils recommandés</h2>
+        </div>
+
+        <div class="metric-value">{{ nbRecommandes | number }}</div>
+        <p class="metric-caption">Profils retenus par le système</p>
+      </article>
+
+      <!-- Derniers ajouts -->
+      <article class="metric-card recent-card">
+        <div class="metric-heading">
+          <span class="metric-icon metric-icon-violet">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="9" cy="8" r="3.5"
+                fill="none" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M3 20v-1.5A5.5 5.5 0 0 1 8.5 13h1A5.5 5.5 0 0 1 15 18.5V20M17 5v6m-3-3h6"
+                fill="none" stroke="currentColor" stroke-width="1.7"
+                stroke-linecap="round"/>
+            </svg>
+          </span>
+          <h2>Derniers ajouts</h2>
+        </div>
+
+        <ul class="recent-list" *ngIf="nouveauxProfils.length > 0; else emptyProfiles">
+          <li *ngFor="let p of nouveauxProfils">
+            <span class="recent-bullet"></span>
+            <div class="recent-profile">
+              <strong>{{ p.fullname }}</strong>
+              <span>{{ p.jobtitle }}</span>
+              <small>Score : {{ p.score | number:'1.0-2' }}</small>
+            </div>
+          </li>
+        </ul>
+
+        <ng-template #emptyProfiles>
+          <p class="empty-state">Aucun profil récent disponible.</p>
+        </ng-template>
+      </article>
+
+      <!-- Score moyen IA -->
+      <article class="metric-card">
+        <div class="metric-heading">
+          <span class="metric-icon metric-icon-orange">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 19V5m0 14h17"
+                fill="none" stroke="currentColor" stroke-width="1.7"
+                stroke-linecap="round"/>
+              <path d="m6 15 4-4 3 2 6-7"
+                fill="none" stroke="currentColor" stroke-width="1.9"
+                stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <h2>Score moyen IA</h2>
+        </div>
+
+        <div class="metric-value">{{ moyenneScore }}%</div>
+        <p class="metric-caption">Score moyen de compatibilité calculé</p>
+      </article>
+
+    </section>
+
+    <!-- GRAPHIQUES -->
     @if (isBrowser()) {
 
-      <section class="charts">
+      <section class="charts" aria-label="Analyses et graphiques">
 
-        <!-- Top métiers -->
-        <div class="chart-card">
-          <h4>Top métiers</h4>
+        <article class="chart-card">
+          <div class="chart-heading">
+            <div>
+              <h2>Top métiers</h2>
+              <p>Répartition des profils par métier</p>
+            </div>
+            <span class="chart-number">01</span>
+          </div>
 
-          <canvas
-            baseChart
-            [datasets]="topMetiersData"
-            [labels]="topMetiersLabels"
-            [type]="'bar'">
-          </canvas>
-        </div>
+          <div class="chart-container">
+            <canvas
+              baseChart
+              [data]="topMetiersChartData"
+              [options]="topMetiersOptions"
+              [type]="'bar'">
+            </canvas>
+          </div>
+        </article>
 
-        <!-- Répartition géographique -->
-        <div class="chart-card">
-          <h4>Répartition géographique</h4>
+        <article class="chart-card">
+          <div class="chart-heading">
+            <div>
+              <h2>Répartition géographique</h2>
+              <p>Distribution des profils par ville</p>
+            </div>
+            <span class="chart-number">02</span>
+          </div>
 
-          <canvas
-            baseChart
-            [datasets]="villesData"
-            [labels]="villesLabels"
-            [type]="'pie'">
-          </canvas>
-        </div>
+          <div class="chart-container">
+            <canvas
+              baseChart
+              [data]="villesChartData"
+              [options]="villesOptions"
+              [type]="'pie'">
+            </canvas>
+          </div>
+        </article>
 
-        <!-- Niveau d'études -->
-        <div class="chart-card">
-          <h4>Niveau d’études</h4>
+        <article class="chart-card">
+          <div class="chart-heading">
+            <div>
+              <h2>Niveau d'études</h2>
+              <p>Répartition des qualifications</p>
+            </div>
+            <span class="chart-number">03</span>
+          </div>
 
-          <canvas
-            baseChart
-            [datasets]="etudesData"
-            [labels]="etudesLabels"
-            [type]="'doughnut'">
-          </canvas>
-        </div>
+          <div class="chart-container">
+            <canvas
+              baseChart
+              [data]="etudesChartData"
+              [options]="etudesOptions"
+              [type]="'doughnut'">
+            </canvas>
+          </div>
+        </article>
 
-        <!-- Top compétences -->
-        <div class="chart-card">
-          <h4>Top compétences</h4>
+        <article class="chart-card">
+          <div class="chart-heading">
+            <div>
+              <h2>Top compétences</h2>
+              <p>Compétences les plus représentées</p>
+            </div>
+            <span class="chart-number">04</span>
+          </div>
 
-          <canvas
-            baseChart
-            [data]="skillsData"
-            [options]="skillsOptions"
-            [type]="'bar'">
-          </canvas>
-        </div>
+          <div class="chart-container">
+            <canvas
+              baseChart
+              [data]="skillsData"
+              [options]="skillsOptions"
+              [type]="'bar'">
+            </canvas>
+          </div>
+        </article>
 
-        <!-- Compétences par métier -->
-        <div class="chart-card wide">
-          <h4>Répartition des compétences par métier</h4>
+        <article class="chart-card chart-card-wide">
+          <div class="chart-heading">
+            <div>
+              <h2>Compétences par métier</h2>
+              <p>Vue comparative des compétences associées aux métiers</p>
+            </div>
+            <span class="chart-number">05</span>
+          </div>
 
-          <canvas
-            baseChart
-            [data]="skillsPerJobData"
-            [options]="skillsPerJobOptions"
-            [type]="'bar'">
-          </canvas>
-        </div>
+          <div class="chart-container chart-container-wide">
+            <canvas
+              baseChart
+              [data]="skillsPerJobData"
+              [options]="skillsPerJobOptions"
+              [type]="'bar'">
+            </canvas>
+          </div>
+        </article>
 
       </section>
 
     } @else {
 
       <section class="charts">
-        <div class="chart-card">
-          <p>Chargement des graphiques...</p>
-        </div>
+        <article class="chart-card chart-loading">
+          <div class="loading-indicator"></div>
+          <p>Préparation des graphiques...</p>
+        </article>
       </section>
 
     }
+
+    <footer class="dashboard-footer">
+      COFICAB · Espace RH
+      <span>Plateforme d'intelligence RH</span>
+    </footer>
 
   </main>
 </div>

@@ -5,9 +5,10 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics import classification_report
 from scipy.sparse import hstack
 import joblib
+from config import CV_TRAINING_DATA_DIR, CV_MODEL_DIR
 
 # 🔹 Charger le dataset équilibré
-df = pd.read_csv("profils_training_balanced.csv")
+df = pd.read_csv(CV_TRAINING_DATA_DIR / "profils_training_balanced.csv")
 
 # 🔹 Vectorisation des textes
 skills_vectorizer = CountVectorizer()
@@ -38,9 +39,10 @@ print("📊 Rapport de classification :")
 print(classification_report(y_test, y_pred))
 
 # 🔹 Sauvegarde du modèle et des vectorizers
-joblib.dump(model, "ia_recrutement_model.joblib")
-joblib.dump(skills_vectorizer, "skills_vectorizer2.joblib")
-joblib.dump(job_vectorizer, "job_vectorizer2.joblib")
-joblib.dump(location_vectorizer, "location_vectorizer2.joblib")
+CV_MODEL_DIR.mkdir(parents=True, exist_ok=True)
+joblib.dump(model, CV_MODEL_DIR / "ia_recrutement_model.joblib")
+joblib.dump(skills_vectorizer, CV_MODEL_DIR / "skills_vectorizer2.joblib")
+joblib.dump(job_vectorizer, CV_MODEL_DIR / "job_vectorizer2.joblib")
+joblib.dump(location_vectorizer, CV_MODEL_DIR / "location_vectorizer2.joblib")
 
 print("✅ Modèle et vectorizers sauvegardés.")

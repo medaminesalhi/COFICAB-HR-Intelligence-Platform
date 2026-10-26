@@ -1,10 +1,17 @@
+import argparse
 import fitz  # PyMuPDF
 import re
 import os
 import json
+from pathlib import Path
+from config import OUTPUTS_DIR
 
 # === 1. Charger le fichier PDF ===
-file_path = "./c7.pdf"
+parser = argparse.ArgumentParser(description="Extraire les informations d’un CV PDF")
+parser.add_argument("pdf", help="Chemin vers le CV PDF à analyser")
+parser.add_argument("--output", help="Chemin JSON de sortie (optionnel)")
+args = parser.parse_args()
+file_path = args.pdf
 if not os.path.exists(file_path):
     raise FileNotFoundError(f"Fichier introuvable : {file_path}")
 
@@ -156,8 +163,12 @@ extracted_data = {
 }
 
 # === 10. Export JSON ===
-with open("./cv_output.json", "w", encoding="utf-8") as f:
+OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+output_path = Path(args.output) if args.output else OUTPUTS_DIR / "cv_output.json"
+output_path.parent.mkdir(parents=True, exist_ok=True)
+with open(output_path, "w", encoding="utf-8") as f:
     json.dump(extracted_data, f, indent=2, ensure_ascii=False)
+print(f"\nJSON enregistré : {output_path}")
 
 # === 11. Affichage terminal ===
 for k, v in extracted_data.items():

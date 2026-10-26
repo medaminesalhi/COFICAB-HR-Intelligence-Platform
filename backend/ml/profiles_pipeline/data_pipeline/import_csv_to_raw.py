@@ -1,20 +1,16 @@
 import pandas as pd
 import psycopg2
+from config import PROFILE_PROCESSED_DATA_DIR, DATABASE_CONFIG
 
 # Charger le fichier nettoyé
-df = pd.read_csv("c:/Users/Lenovo/projet/backend/profils_nettoyes.csv")
+df = pd.read_csv(PROFILE_PROCESSED_DATA_DIR / "profils_nettoyes.csv")
 
 # Connexion à PostgreSQL
-conn = psycopg2.connect(
-    dbname="projet_rh",
-    user="postgres",
-    password="0000",
-    host="localhost",
-    port="5432"
-)
+conn = psycopg2.connect(**DATABASE_CONFIG)
 cur = conn.cursor()
 
-# Vider la table (optionnel mais recommandé avant réinsertion complète)
+# ATTENTION : cette version historique remplace le contenu de raw_profiles.
+# Ne pas exécuter avant d’avoir validé une stratégie de chargement/dédoublonnage.
 cur.execute("DELETE FROM raw_profiles;")
 
 # Insérer les données avec la colonne skills incluse

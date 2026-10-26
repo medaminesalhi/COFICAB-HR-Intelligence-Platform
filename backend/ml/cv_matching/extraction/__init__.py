@@ -1,0 +1,1 @@
+"""COFICAB workflow package."""

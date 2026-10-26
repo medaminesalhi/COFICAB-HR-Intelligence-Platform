@@ -74,3 +74,13 @@ typings
 # ---------- Temporary files ----------
 tmp/
 temp/
+# ---------- Angular generated files ----------
+**/.angular/
+*.tsbuildinfo
+
+# ---------- Uploaded CVs and generated outputs ----------
+backend/storage/temp_cv/*
+!backend/storage/temp_cv/.gitkeep
+
+backend/storage/outputs/*
+!backend/storage/outputs/.gitkeep

@@ -1,0 +1,21 @@
+# Secrets locaux
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# CV et résultats extraits (données personnelles)
+storage/temp_cv/*
+!storage/temp_cv/.gitkeep
+storage/outputs/*
+!storage/outputs/.gitkeep
+
+# Datasets potentiellement personnels : ne versionner qu'après validation/anonymisation
+data/**/*.csv
+
+# Logs
+*.log

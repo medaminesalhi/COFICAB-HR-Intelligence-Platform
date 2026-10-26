@@ -1,15 +1,10 @@
 import pandas as pd
 import psycopg2
 from sklearn.preprocessing import LabelEncoder
+from config import DATABASE_CONFIG
 
 # Connexion PostgreSQL
-conn = psycopg2.connect(
-    dbname="projet_rh",
-    user="postgres",
-    password="0000",
-    host="localhost",
-    port="5432"
-)
+conn = psycopg2.connect(**DATABASE_CONFIG)
 cur = conn.cursor()
 
 # 📥 Lire depuis raw_profiles
@@ -62,6 +57,8 @@ df_final = df[[
     "annee_experience", "mobilite", "niveau_etude", "profil_senior", "recrute", "skills"
 ]]
 
+# ATTENTION : cette version historique efface puis reconstruit ml_ready_profiles.
+# À convertir en chargement transactionnel/non destructif dans la phase Data Engineering.
 # 🔁 Vider la table ml_ready_profiles
 cur.execute("DELETE FROM ml_ready_profiles;")
 

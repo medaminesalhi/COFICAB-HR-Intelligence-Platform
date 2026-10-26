@@ -13,7 +13,6 @@ import { BaseChartDirective } from 'ng2-charts';
 
 import type {
   ChartData,
-  ChartDataset,
   ChartOptions
 } from 'chart.js';
 
@@ -30,7 +29,7 @@ import type {
 })
 export class DashboardComponent {
 
-  // Le canvas sera créé uniquement dans le navigateur.
+  // Le rendu des graphiques est réservé au navigateur.
   readonly isBrowser = signal(false);
 
   nomUtilisateur = '';
@@ -39,24 +38,113 @@ export class DashboardComponent {
   totalProfils = 0;
   nbRecommandes = 0;
   moyenneScore = 0;
+
   nouveauxProfils: any[] = [];
 
-  // Graphique : top métiers
-  topMetiersLabels: string[] = [];
-  topMetiersData: ChartDataset<'bar'>[] = [];
+  // Initiale affichée dans l'avatar de la barre supérieure.
+  get initialeUtilisateur(): string {
+    const nom = this.nomUtilisateur.trim();
 
-  // Graphique : répartition des villes
-  villesLabels: string[] = [];
-  villesData: ChartDataset<'pie'>[] = [];
+    return nom ? nom.charAt(0).toUpperCase() : 'U';
+  }
 
-  // Graphique : niveau d'études
-  etudesLabels: string[] = [];
-  etudesData: ChartDataset<'doughnut'>[] = [];
+  // Palette cohérente avec l'identité visuelle COFICAB.
+  private readonly palette = [
+    '#2589C3',
+    '#2DA88A',
+    '#E9AD43',
+    '#7662C9',
+    '#E66D70',
+    '#5BABC7',
+    '#83B86B',
+    '#D58D55',
+    '#5276A5',
+    '#A2B4C3'
+  ];
 
-  // Graphique : top compétences
+  // 1. Top métiers
+  topMetiersChartData: ChartData<'bar'> = {
+    labels: [],
+    datasets: []
+  };
+
+  topMetiersOptions: ChartOptions<'bar'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false
+        },
+        ticks: {
+          maxRotation: 35,
+          minRotation: 0
+        }
+      },
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: '#edf1f5'
+        },
+        ticks: {
+          precision: 0
+        }
+      }
+    }
+  };
+
+  // 2. Répartition géographique
+  villesChartData: ChartData<'pie'> = {
+    labels: [],
+    datasets: []
+  };
+
+  villesOptions: ChartOptions<'pie'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          boxWidth: 10,
+          padding: 12,
+          usePointStyle: true
+        }
+      }
+    }
+  };
+
+  // 3. Niveau d'études
+  etudesChartData: ChartData<'doughnut'> = {
+    labels: [],
+    datasets: []
+  };
+
+  etudesOptions: ChartOptions<'doughnut'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '62%',
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          boxWidth: 10,
+          padding: 10,
+          usePointStyle: true
+        }
+      }
+    }
+  };
+
+  // 4. Top compétences
   skillsData: ChartData<'bar'> = {
-    datasets: [],
-    labels: []
+    labels: [],
+    datasets: []
   };
 
   skillsOptions: ChartOptions<'bar'> = {
@@ -64,15 +152,31 @@ export class DashboardComponent {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top'
+        display: false
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false
+        }
+      },
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: '#edf1f5'
+        },
+        ticks: {
+          precision: 0
+        }
       }
     }
   };
 
-  // Graphique : compétences par métier
+  // 5. Compétences par métier
   skillsPerJobData: ChartData<'bar'> = {
-    datasets: [],
-    labels: []
+    labels: [],
+    datasets: []
   };
 
   skillsPerJobOptions: ChartOptions<'bar'> = {
@@ -81,7 +185,23 @@ export class DashboardComponent {
     indexAxis: 'y',
     plugins: {
       legend: {
-        position: 'top'
+        display: false
+      }
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        grid: {
+          color: '#edf1f5'
+        },
+        ticks: {
+          precision: 0
+        }
+      },
+      y: {
+        grid: {
+          display: false
+        }
       }
     }
   };
@@ -90,7 +210,8 @@ export class DashboardComponent {
     private readonly http: HttpClient,
     private readonly cdr: ChangeDetectorRef
   ) {
-    // Ce callback ne s'exécute pas pendant le SSR.
+    // Exécuté après le rendu initial dans le navigateur,
+    // pas pendant le rendu serveur.
     afterNextRender(() => {
       this.isBrowser.set(true);
       this.chargerDashboard();
@@ -98,7 +219,6 @@ export class DashboardComponent {
   }
 
   private chargerDashboard(): void {
-    // localStorage est utilisé uniquement côté navigateur.
     const nom = localStorage.getItem('user_nom');
 
     if (nom) {
@@ -122,8 +242,7 @@ export class DashboardComponent {
       }
     ).subscribe({
       next: (res) => {
-        console.log('Données reçues du backend :', res);
-
+        console.log('Données du dashboard reçues :', res);
         this.injecterDonnees(res ?? {});
       },
       error: (err) => {
@@ -136,7 +255,7 @@ export class DashboardComponent {
   }
 
   private injecterDonnees(data: any): void {
-
+    // Indicateurs principaux
     this.totalProfils = Number(
       data?.totalProfils ?? 0
     );
@@ -155,6 +274,7 @@ export class DashboardComponent {
       ? data.nouveauxProfils
       : [];
 
+    // Sécurisation des données reçues du backend
     const topMetiers = Array.isArray(data?.topMetiers)
       ? data.topMetiers
       : [];
@@ -176,49 +296,58 @@ export class DashboardComponent {
       : [];
 
     // 1. Top métiers
-    this.topMetiersLabels = topMetiers.map(
-      (m: any) => String(m?.jobtitle ?? 'Non renseigné')
-    );
-
-    this.topMetiersData = [
-      {
-        data: topMetiers.map(
-          (m: any) => Number(m?.total ?? 0)
-        ),
-        label: 'Métiers',
-        backgroundColor: this.generateColors(topMetiers.length)
-      }
-    ];
+    this.topMetiersChartData = {
+      labels: topMetiers.map(
+        (m: any) => String(m?.jobtitle ?? 'Non renseigné')
+      ),
+      datasets: [
+        {
+          label: 'Profils',
+          data: topMetiers.map(
+            (m: any) => Number(m?.total ?? 0)
+          ),
+          backgroundColor: this.generateColors(topMetiers.length),
+          borderRadius: 6,
+          borderSkipped: false
+        }
+      ]
+    };
 
     // 2. Répartition géographique
-    this.villesLabels = villes.map(
-      (v: any) => String(v?.location ?? 'Non renseigné')
-    );
-
-    this.villesData = [
-      {
-        data: villes.map(
-          (v: any) => Number(v?.total ?? 0)
-        ),
-        label: 'Villes',
-        backgroundColor: this.generateColors(villes.length)
-      }
-    ];
+    this.villesChartData = {
+      labels: villes.map(
+        (v: any) => String(v?.location ?? 'Non renseigné')
+      ),
+      datasets: [
+        {
+          label: 'Profils par ville',
+          data: villes.map(
+            (v: any) => Number(v?.total ?? 0)
+          ),
+          backgroundColor: this.generateColors(villes.length),
+          borderColor: '#ffffff',
+          borderWidth: 2
+        }
+      ]
+    };
 
     // 3. Niveau d'études
-    this.etudesLabels = etudes.map(
-      (e: any) => String(e?.schooldegree ?? 'Non renseigné')
-    );
-
-    this.etudesData = [
-      {
-        data: etudes.map(
-          (e: any) => Number(e?.total ?? 0)
-        ),
-        label: 'Diplômes',
-        backgroundColor: this.generateColors(etudes.length)
-      }
-    ];
+    this.etudesChartData = {
+      labels: etudes.map(
+        (e: any) => String(e?.schooldegree ?? 'Non renseigné')
+      ),
+      datasets: [
+        {
+          label: 'Profils par niveau d’études',
+          data: etudes.map(
+            (e: any) => Number(e?.total ?? 0)
+          ),
+          backgroundColor: this.generateColors(etudes.length),
+          borderColor: '#ffffff',
+          borderWidth: 2
+        }
+      ]
+    };
 
     // 4. Top compétences
     this.skillsData = {
@@ -227,11 +356,13 @@ export class DashboardComponent {
       ),
       datasets: [
         {
+          label: 'Occurrences',
           data: topSkills.map(
             (s: any) => Number(s?.count ?? 0)
           ),
-          label: 'Compétences',
-          backgroundColor: this.generateColors(topSkills.length)
+          backgroundColor: this.generateColors(topSkills.length),
+          borderRadius: 5,
+          borderSkipped: false
         }
       ]
     };
@@ -243,11 +374,11 @@ export class DashboardComponent {
           ? job.skills
           : [];
 
-        return skills.map((s: any) => ({
-          label: `${job?.job ?? 'Métier'} → ${
-            s?.skill ?? 'Compétence'
+        return skills.map((skill: any) => ({
+          label: `${job?.job ?? 'Métier'} — ${
+            skill?.skill ?? 'Compétence'
           }`,
-          count: Number(s?.count ?? 0)
+          count: Number(skill?.count ?? 0)
         }));
       }
     );
@@ -258,13 +389,15 @@ export class DashboardComponent {
       ),
       datasets: [
         {
+          label: 'Occurrences',
           data: skillsEntries.map(
             (entry: any) => entry.count
           ),
-          label: 'Compétences/Métier',
           backgroundColor: this.generateColors(
             skillsEntries.length
-          )
+          ),
+          borderRadius: 4,
+          borderSkipped: false
         }
       ]
     };
@@ -274,10 +407,9 @@ export class DashboardComponent {
   }
 
   private generateColors(n: number): string[] {
-    return Array.from({ length: n }, () =>
-      '#' + Math.floor(Math.random() * 16777215)
-        .toString(16)
-        .padStart(6, '0')
+    return Array.from(
+      { length: n },
+      (_, index) => this.palette[index % this.palette.length]
     );
   }
 

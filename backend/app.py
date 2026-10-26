@@ -1,41 +1,33 @@
+from datetime import timedelta
+import re
+import joblib
+import numpy as np
+import psycopg2
+import fitz
+from scipy.sparse import hstack
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from passlib.hash import bcrypt
 from flask_jwt_extended import (
-    JWTManager, create_access_token,
-    jwt_required, get_jwt_identity
+    JWTManager, create_access_token, jwt_required, get_jwt_identity
 )
-from datetime import timedelta
-import psycopg2
-from flask import request, jsonify
-import psycopg2
-import re
-from datetime import datetime
-from flask import request, jsonify
-import joblib
-import numpy as np
-import os
-import joblib
-model2 = joblib.load("ia_recrutement_model.joblib")
-skills_vectorizer2 = joblib.load("skills_vectorizer2.joblib")
-
-def split_skills(text):
-    return text.split(", ") if isinstance(text, str) else []
-vectorizer = joblib.load("skills_vectorizer.joblib")
-model = joblib.load("model_rh_optimized.joblib")
+from config import (
+    CV_MODEL_DIR, DATABASE_CONFIG, DATABASE_URL, JWT_SECRET_KEY,
+    JWT_TOKEN_LIFETIME_HOURS, DEBUG
+)
 
 # 🔧 Initialisation app
 app = Flask(__name__)
 CORS(app)
 
 # PostgreSQL config (pour SQLAlchemy)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:0000@localhost/projet_rh'
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # JWT config
-app.config['JWT_SECRET_KEY'] = 'ton_super_secret'
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1)
+app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=JWT_TOKEN_LIFETIME_HOURS)
 
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
@@ -72,13 +64,8 @@ def login():
 
 # 🔌 Connexion DB brute (pour requêtes manuelles)
 def get_conn():
-    return psycopg2.connect(
-        dbname="projet_rh",
-        user="postgres",
-        password="0000",
-        host="localhost",
-        port="5432"
-    )
+    """Ouvre une connexion PostgreSQL à partir de la configuration commune."""
+    return psycopg2.connect(**DATABASE_CONFIG)
 
 # 🔐 Exemple route protégée
 @app.route('/api/profil-count', methods=['GET'])
@@ -297,13 +284,7 @@ def save_profile():
     exp_candidat = data.get("exp_candidat", 0)
 
     try:
-        conn = psycopg2.connect(
-            dbname="projet_rh",
-            user="postgres",
-            password="0000",
-            host="localhost",
-            port="5432"
-        )
+        conn = get_conn()
         cur = conn.cursor()
 
         # ➕ Insert complet dans scraped_profiles (historique)
@@ -337,21 +318,23 @@ def save_profile():
 
 @app.route('/api/scrape_cv', methods=['POST'])
 def scrape_cv():
-    import fitz, os, re
-    from flask import request, jsonify
-    from werkzeug.utils import secure_filename
-
     if 'cv' not in request.files:
         return jsonify({"error": "Aucun fichier reçu"}), 400
 
     file = request.files['cv']
-    filename = secure_filename(file.filename)
-    filepath = os.path.join("temp_cv", filename)
-    os.makedirs("temp_cv", exist_ok=True)
-    file.save(filepath)
+    if not file.filename:
+        return jsonify({"error": "Nom de fichier manquant"}), 400
 
-    doc = fitz.open(filepath)
-    text = "".join([page.get_text() for page in doc])
+    # Le PDF est lu en mémoire : le CV n'est pas conservé sur le disque par cette route.
+    try:
+        pdf_bytes = file.read()
+        if not pdf_bytes:
+            return jsonify({"error": "Le fichier est vide"}), 400
+        with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+            text = "".join(page.get_text() for page in doc)
+    except Exception:
+        return jsonify({"error": "Le fichier reçu n'est pas un PDF lisible"}), 400
+
     lines = [line.strip() for line in text.split("\n") if line.strip()]
     cleaned_text = " ".join(lines).lower()
 
@@ -478,10 +461,10 @@ def predict_match():
     import re
 
     # === 🔁 Charger modèle + vectorizers ===
-    model2 = joblib.load("ia_recrutement_model.joblib")
-    skills_vectorizer2 = joblib.load("skills_vectorizer2.joblib")
-    job_vectorizer2 = joblib.load("job_vectorizer2.joblib")
-    location_vectorizer2 = joblib.load("location_vectorizer2.joblib")
+    model2 = joblib.load(CV_MODEL_DIR / "ia_recrutement_model.joblib")
+    skills_vectorizer2 = joblib.load(CV_MODEL_DIR / "skills_vectorizer2.joblib")
+    job_vectorizer2 = joblib.load(CV_MODEL_DIR / "job_vectorizer2.joblib")
+    location_vectorizer2 = joblib.load(CV_MODEL_DIR / "location_vectorizer2.joblib")
 
     # === 📥 Données reçues ===
     data = request.get_json()
@@ -564,13 +547,7 @@ def predict_match():
 
     # === 🗃️ Stockage PostgreSQL
     try:
-        conn = psycopg2.connect(
-            dbname="projet_rh",
-            user="postgres",
-            password="0000",
-            host="localhost",
-            port="5432"
-        )
+        conn = get_conn()
         cur = conn.cursor()
 
         cur.execute("""
@@ -606,5 +583,5 @@ def predict_match():
 
 # ✅ Lancement du serveur
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=DEBUG)
 

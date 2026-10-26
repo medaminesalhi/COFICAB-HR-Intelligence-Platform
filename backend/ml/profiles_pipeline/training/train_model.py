@@ -7,15 +7,10 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import StandardScaler
 from scipy.sparse import hstack, csr_matrix
 import joblib
+from config import DATABASE_CONFIG, PROFILE_MODEL_DIR
 
 # Connexion PostgreSQL
-conn = psycopg2.connect(
-    dbname="projet_rh",
-    user="postgres",
-    password="0000",
-    host="localhost",
-    port="5432"
-)
+conn = psycopg2.connect(**DATABASE_CONFIG)
 cur = conn.cursor()
 
 # Lecture des données
@@ -47,7 +42,8 @@ vectorizer = TfidfVectorizer(tokenizer=split_skills, max_features=200)
 X_skills = vectorizer.fit_transform(df["skills"].astype(str))
 
 # Sauvegarde du vectorizer
-joblib.dump(vectorizer, "skills_vectorizer.joblib")
+PROFILE_MODEL_DIR.mkdir(parents=True, exist_ok=True)
+joblib.dump(vectorizer, PROFILE_MODEL_DIR / "skills_vectorizer.joblib")
 
 # Features numériques/encodées
 X_numeric = df[[
@@ -59,7 +55,7 @@ X_numeric = df[[
 # Normalisation
 scaler = StandardScaler()
 X_numeric_scaled = scaler.fit_transform(X_numeric)
-joblib.dump(scaler, "numeric_scaler.joblib")
+joblib.dump(scaler, PROFILE_MODEL_DIR / "numeric_scaler.joblib")
 
 # Fusion des features finales
 X_final = hstack([csr_matrix(X_numeric_scaled), X_skills])
@@ -89,7 +85,7 @@ print(classification_report(y_test, y_pred))
 print("[RESULT] Précision globale :", accuracy_score(y_test, y_pred))
 
 # Sauvegarde du modèle
-joblib.dump(model, "model_rh_optimized.joblib")
+joblib.dump(model, PROFILE_MODEL_DIR / "model_rh_optimized.joblib")
 print("[INFO] Modèle sauvegardé sous model_rh_optimized.joblib")
 
 # Prédictions
@@ -98,6 +94,8 @@ probas = model.predict_proba(X_final)[:, 1]
 df["prediction"] = predictions
 df["score"] = probas
 
+# ATTENTION : ce script remplace actuellement tous les scores existants.
+# À sécuriser avant une exécution sur des données de production.
 # Nettoyage de la table scored_profiles
 cur.execute("TRUNCATE TABLE scored_profiles;")
 

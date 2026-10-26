@@ -1,7 +1,10 @@
+from pathlib import Path
 import pandas as pd
+from config import PROFILE_RAW_DATA_DIR, PROFILE_PROCESSED_DATA_DIR
 
 # 📥 Charger le fichier brut (à adapter selon ton chemin local)
-df = pd.read_csv("c:/Users/Lenovo/projet/backend/profils_final_avec_skills.csv")
+input_path = PROFILE_RAW_DATA_DIR / "profils_final_avec_skills.csv"
+df = pd.read_csv(input_path)
 
 # ✅ Étape 1 : Supprimer les doublons
 df.drop_duplicates(inplace=True)
@@ -28,6 +31,8 @@ df["nombreStage"] = df["nombreStage"].astype(int)
 df.fillna("", inplace=True)
 
 # ✅ Étape 6 : Sauvegarder le fichier propre
-df.to_csv("c:/Users/Lenovo/projet/backend/profils_nettoyes.csv", index=False)
+output_path = PROFILE_PROCESSED_DATA_DIR / "profils_nettoyes.csv"
+output_path.parent.mkdir(parents=True, exist_ok=True)
+df.to_csv(output_path, index=False)
 
-print("✅ Fichier nettoyé enregistré sous profils_nettoyes.csv")
+print(f"✅ Fichier nettoyé enregistré : {output_path}")
