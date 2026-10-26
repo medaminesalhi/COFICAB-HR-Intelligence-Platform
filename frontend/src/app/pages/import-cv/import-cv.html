@@ -1,0 +1,157 @@
+<!-- ✅ NAVBAR + SIDEBAR conservée telle quelle -->
+<nav class="navbar">
+  <div class="navbar-left">
+    <img src="images.png" alt="Logo" class="logo" />
+    <span class="navbar-title">Espace RH</span>
+  </div>
+  <div class="navbar-right">
+    <div class="user-info">
+      <img src="assets/avatar.png" alt="Avatar" class="avatar" />
+      <div class="user-meta">
+        <span class="user-name"></span>
+        <span class="user-status">🟢 En ligne</span>
+      </div>
+    </div>
+    <button class="logout-btn">Déconnexion</button>
+  </div>
+</nav>
+
+<div class="dashboard-container">
+  <aside class="sidebar">
+    <ul>
+      <li><i class="icon">📊</i> Tableau de bord</li>
+      <li><i class="icon">📁</i> Profils trouvés</li>
+      <li><i class="icon">📨</i> Import CV</li>
+      <li><i class="icon">📈</i> Statistiques RH</li>
+      <li><i class="icon">💬</i> Feedback IA</li>
+    </ul>
+  </aside>
+  
+  <!-- ✅ Zone principale en deux colonnes -->
+  <div class="main-area">
+    <!-- 📄 Colonne gauche -->
+    <div class="left-panel">
+  <h2 class="cv-title">📤 Importer un CV</h2>
+
+
+      <!-- Zone upload -->
+      <label class="drop-zone">
+        <input type="file" accept=".pdf,.doc,.docx" (change)="onFileSelected($event)" hidden />
+        <span *ngIf="!fileName">Cliquez ou glissez un CV ici</span>
+        <span *ngIf="fileName">Fichier : {{ fileName }}</span>
+      </label>
+
+      <!-- Aperçu PDF -->
+      <div class="pdf-preview" *ngIf="pdfUrl">
+  <object [data]="safePdfUrl" type="application/pdf" width="100%" height="600px">
+    <p>PDF non supporté. <a [href]="pdfUrl" target="_blank">Ouvrir le fichier</a></p>
+  </object>
+</div>
+
+
+      <!-- Bouton reset -->
+      <button *ngIf="fileName" class="btn btn-light mt" (click)="resetFichier()">🗑️ Modifier le fichier</button>
+    </div>
+
+    <!-- 🧠 Colonne droite -->
+    <div class="right-panel">
+      <button *ngIf="fileName && !cvData" class="btn btn-primary" (click)="scraperCv()">⚙️ Scrapper</button>
+
+      <!-- Formulaire scrappé -->
+      <div *ngIf="cvData" class="cv-fields">
+        <h3>📋 Données extraites</h3>
+        <div class="field"><label>Nom :</label><input [(ngModel)]="cvData.nom" /></div>
+        <div class="field"><label>Email :</label><input [(ngModel)]="cvData.email" /></div>
+        <div class="field"><label>Téléphone :</label><input [(ngModel)]="cvData.telephone" /></div>
+        <div class="field"><label>Adresse :</label><input [(ngModel)]="cvData.adresse" /></div>
+        <div class="field"><label>Poste :</label><input [(ngModel)]="cvData.jobtitle" /></div>
+        <div class="field"><label>Compétences :</label><textarea [(ngModel)]="cvData.competences"></textarea></div>
+        <div class="field"><label>Formation :</label><textarea [(ngModel)]="cvData.formation"></textarea></div>
+        <div class="field"><label>Expérience :</label><textarea [(ngModel)]="cvData.experience"></textarea></div>
+        <div class="field"><label>Langues :</label><textarea [(ngModel)]="cvData.langues"></textarea></div>
+
+        <button class="btn btn-success" (click)="enregistrerProfil()">💾 Enregistrer</button>
+      </div>
+    </div>
+  </div>
+  
+<div class="ia-form-container" *ngIf="formulaireVisible">
+  <h3 class="ia-title"> Test du profil par IA</h3>
+
+  <!-- Poste recherché -->
+  <div class="ia-field">
+    <label for="poste"> Poste recherché</label>
+    <select id="poste" [(ngModel)]="critere.poste" (change)="mettreAJourCompetences()">
+      <option value="" disabled selected>-- Sélectionner un poste --</option>
+      <option *ngFor="let metier of metiers" [value]="metier.value">{{ metier.label }}</option>
+    </select>
+  </div>
+
+  <!-- Compétences requises -->
+  <div class="ia-field" *ngIf="competencesAssociees.length > 0">
+    <label> Compétences requises</label>
+    <div class="skills-grid">
+      <label *ngFor="let skill of competencesAssociees" class="skill-checkbox">
+        <input type="checkbox" [value]="skill" (change)="mettreAJourSkills($event)" />
+        {{ skill }}
+      </label>
+    </div>
+  </div>
+
+  <!-- Localisation -->
+  <div class="ia-field">
+    <label for="location"> Localisation souhaitée</label>
+    <input id="location" [(ngModel)]="critere.location" placeholder="ex: Tunis" />
+  </div>
+
+  <!-- Expérience candidat -->
+  <div class="ia-field">
+    <label for="expCand"> Années d'expérience du candidat (dans ce domaine)</label>
+    <input id="expCand" type="number" min="0" [(ngModel)]="critere.exp_candidat" />
+  </div>
+
+  <!-- Expérience exigée -->
+  <div class="ia-field">
+    <label for="expReq"> Années d'expérience minimale exigée</label>
+    <input id="expReq" type="number" min="0" [(ngModel)]="critere.experience" />
+  </div>
+
+  <!-- Lancer IA -->
+  <div class="ia-button">
+    <button class="btn-launch" (click)="testerIaProfil()">⚙️ Lancer IA</button>
+  </div>
+
+ <div *ngIf="resultatIa" class="ia-result-card">
+  <h3 class="result-title">Résultat de l'évaluation IA</h3>
+
+  <div class="candidate-summary">
+    <p><strong>Nom du candidat :</strong> {{ cvData.nom || 'Non précisé' }}</p>
+    <p><strong>Poste ciblé :</strong> {{ critere.poste || 'Non précisé' }}</p>
+    <p><strong>Localisation souhaitée :</strong> {{ critere.location || 'Non précisée' }}</p>
+    <p><strong>Expérience exigée :</strong> {{ critere.experience || 0 }} an(s)</p>
+  </div>
+
+  <div class="score-section">
+    <p><strong>Score IA :</strong>
+      <span [ngClass]="{
+        'score-high': resultatIa.score >= 75,
+        'score-medium': resultatIa.score >= 50 && resultatIa.score < 75,
+        'score-low': resultatIa.score < 50
+      }">{{ resultatIa.score }}%</span>
+    </p>
+
+    <p><strong>Analyse IA :</strong></p>
+    <pre class="ia-message">{{ resultatIa.message }}</pre>
+  </div>
+
+  <div class="final-status" [ngClass]="{
+      'status-recommended': resultatIa.recommande,
+      'status-not-recommended': !resultatIa.recommande
+    }">
+    <span *ngIf="resultatIa.recommande">Ce profil est <strong>recommandé</strong>.</span>
+    <span *ngIf="!resultatIa.recommande">Ce profil <strong>ne correspond pas</strong> aux critères.</span>
+  </div>
+</div>
+
+
+</div>
