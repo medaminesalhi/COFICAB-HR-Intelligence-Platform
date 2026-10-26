@@ -1,157 +1,148 @@
-<!-- ✅ NAVBAR + SIDEBAR conservée telle quelle -->
-<nav class="navbar">
-  <div class="navbar-left">
-    <img src="images.png" alt="Logo" class="logo" />
-    <span class="navbar-title">Espace RH</span>
+<header class="topbar">
+  <div class="brand">
+    <img src="/images.png" alt="Logo COFICAB" class="brand-logo" />
+    <div class="brand-copy"><span class="brand-title">ESPACE RH</span><span class="brand-subtitle">Talent Intelligence Platform</span></div>
   </div>
-  <div class="navbar-right">
-    <div class="user-info">
-      <img src="assets/avatar.png" alt="Avatar" class="avatar" />
-      <div class="user-meta">
-        <span class="user-name"></span>
-        <span class="user-status">🟢 En ligne</span>
-      </div>
+  <div class="topbar-actions">
+    <div class="user-chip">
+      <div class="user-avatar">{{ initialeUtilisateur }}</div>
+      <div class="user-details"><span class="user-name">{{ nomUtilisateur || 'Utilisateur' }}</span><span class="user-presence"><span class="status-dot"></span>En ligne</span></div>
     </div>
-    <button class="logout-btn">Déconnexion</button>
+    <button type="button" class="logout-btn" (click)="deconnexion()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3m9-7h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg><span>Déconnexion</span>
+    </button>
   </div>
-</nav>
+</header>
 
-<div class="dashboard-container">
+<div class="dashboard-shell">
   <aside class="sidebar">
-    <ul>
-      <li><i class="icon">📊</i> Tableau de bord</li>
-      <li><i class="icon">📁</i> Profils trouvés</li>
-      <li><i class="icon">📨</i> Import CV</li>
-      <li><i class="icon">📈</i> Statistiques RH</li>
-      <li><i class="icon">💬</i> Feedback IA</li>
-    </ul>
+    <div class="sidebar-section-label">ESPACE DE TRAVAIL</div>
+    <nav class="side-nav" aria-label="Navigation principale">
+      <a class="nav-link" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="11" width="7" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="14" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+        <span class="nav-label">Tableau de bord</span><span class="nav-indicator"></span>
+      </a>
+      <a class="nav-link" routerLink="/recherche" routerLinkActive="active">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span class="nav-label">Recherche profils</span><span class="nav-indicator"></span>
+      </a>
+      <a class="nav-link" routerLink="/import-cv" routerLinkActive="active">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span class="nav-label">Import CV</span><span class="nav-indicator"></span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7v5c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7l-8-4Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m8.5 12 2.2 2.2 4.8-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="sidebar-footer-copy"><strong>COFICAB HR</strong><span>Recruitment Intelligence</span></div>
+    </div>
   </aside>
-  
-  <!-- ✅ Zone principale en deux colonnes -->
-  <div class="main-area">
-    <!-- 📄 Colonne gauche -->
-    <div class="left-panel">
-  <h2 class="cv-title">📤 Importer un CV</h2>
 
-
-      <!-- Zone upload -->
-      <label class="drop-zone">
-        <input type="file" accept=".pdf,.doc,.docx" (change)="onFileSelected($event)" hidden />
-        <span *ngIf="!fileName">Cliquez ou glissez un CV ici</span>
-        <span *ngIf="fileName">Fichier : {{ fileName }}</span>
-      </label>
-
-      <!-- Aperçu PDF -->
-      <div class="pdf-preview" *ngIf="pdfUrl">
-  <object [data]="safePdfUrl" type="application/pdf" width="100%" height="600px">
-    <p>PDF non supporté. <a [href]="pdfUrl" target="_blank">Ouvrir le fichier</a></p>
-  </object>
-</div>
-
-
-      <!-- Bouton reset -->
-      <button *ngIf="fileName" class="btn btn-light mt" (click)="resetFichier()">🗑️ Modifier le fichier</button>
+  <main class="main-content">
+    <div class="page-heading">
+      <div><span class="page-eyebrow">ESPACE RH / CV PROCESSING</span><h1>Importer et analyser un CV</h1><p>Extrayez les informations d’un candidat, vérifiez-les puis évaluez sa correspondance avec un poste.</p></div>
+      <div class="workflow-status"><span class="workflow-dot"></span>Pipeline de traitement CV</div>
     </div>
 
-    <!-- 🧠 Colonne droite -->
-    <div class="right-panel">
-      <button *ngIf="fileName && !cvData" class="btn btn-primary" (click)="scraperCv()">⚙️ Scrapper</button>
+    <div class="alert success-alert" *ngIf="successMessage" role="status"><span class="alert-icon">✓</span>{{ successMessage }}</div>
+    <div class="alert error-alert" *ngIf="errorMessage" role="alert"><span class="alert-icon">!</span>{{ errorMessage }}</div>
 
-      <!-- Formulaire scrappé -->
-      <div *ngIf="cvData" class="cv-fields">
-        <h3>📋 Données extraites</h3>
-        <div class="field"><label>Nom :</label><input [(ngModel)]="cvData.nom" /></div>
-        <div class="field"><label>Email :</label><input [(ngModel)]="cvData.email" /></div>
-        <div class="field"><label>Téléphone :</label><input [(ngModel)]="cvData.telephone" /></div>
-        <div class="field"><label>Adresse :</label><input [(ngModel)]="cvData.adresse" /></div>
-        <div class="field"><label>Poste :</label><input [(ngModel)]="cvData.jobtitle" /></div>
-        <div class="field"><label>Compétences :</label><textarea [(ngModel)]="cvData.competences"></textarea></div>
-        <div class="field"><label>Formation :</label><textarea [(ngModel)]="cvData.formation"></textarea></div>
-        <div class="field"><label>Expérience :</label><textarea [(ngModel)]="cvData.experience"></textarea></div>
-        <div class="field"><label>Langues :</label><textarea [(ngModel)]="cvData.langues"></textarea></div>
+    <section class="import-grid">
+      <article class="panel upload-panel">
+        <div class="panel-heading">
+          <div class="panel-icon blue-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div><h2>Document du candidat</h2><p>Importez un CV pour commencer l’analyse.</p></div>
+        </div>
 
-        <button class="btn btn-success" (click)="enregistrerProfil()">💾 Enregistrer</button>
+        <label class="drop-zone" for="cvFileInput" [class.has-file]="!!fileName">
+          <input #fileInput id="cvFileInput" type="file" accept=".pdf,.doc,.docx" (change)="onFileSelected($event)" />
+          <span class="upload-symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 3v5h5M12 17v-5m-2 2 2-2 2 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <strong>{{ fileName || 'Sélectionner un CV' }}</strong>
+          <span class="drop-description">Cliquez pour parcourir vos fichiers</span>
+          <span class="file-types">PDF, DOC ou DOCX</span>
+        </label>
+
+        <div class="selected-file" *ngIf="fileName">
+          <div class="file-type-icon">{{ isPdfSelected ? 'PDF' : 'DOC' }}</div>
+          <div class="selected-file-info"><strong>{{ fileName }}</strong><span>Fichier prêt à être traité</span></div>
+          <button type="button" class="icon-button" (click)="resetFichier(fileInput)" aria-label="Retirer le fichier">×</button>
+        </div>
+
+        <div class="upload-actions">
+          <button type="button" class="btn-primary" (click)="scraperCv()" [disabled]="!selectedFile || isScraping">
+            <span *ngIf="!isScraping">{{ cvData ? 'Réextraire les données' : 'Extraire les données' }}</span>
+            <span *ngIf="isScraping">Extraction en cours…</span>
+            <svg *ngIf="!isScraping" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+
+        <div class="pdf-preview" *ngIf="pdfUrl && safePdfUrl">
+          <div class="preview-heading"><strong>Aperçu du document</strong><a [href]="pdfUrl" target="_blank" rel="noopener">Ouvrir dans un nouvel onglet ↗</a></div>
+          <object [data]="safePdfUrl" type="application/pdf" aria-label="Aperçu du CV au format PDF">
+            <p>Votre navigateur ne permet pas l’aperçu. <a [href]="pdfUrl" target="_blank" rel="noopener">Ouvrir le PDF</a>.</p>
+          </object>
+        </div>
+      </article>
+
+      <article class="panel extraction-panel">
+        <div class="panel-heading">
+          <div class="panel-icon violet-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><h2>Informations extraites</h2><p>Relisez et corrigez les champs avant l’enregistrement.</p></div>
+        </div>
+
+        <div class="empty-extraction" *ngIf="!cvData">
+          <div class="empty-extraction-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 3v5h5M8 13h8M8 17h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+          <h3>En attente d’un CV</h3><p>Après avoir sélectionné un document, cliquez sur « Extraire les données » pour afficher les informations du candidat.</p>
+        </div>
+
+        <form class="cv-fields" *ngIf="cvData" (ngSubmit)="enregistrerProfil()">
+          <div class="field-grid">
+            <div class="form-field"><label for="cvNom">Nom complet</label><input id="cvNom" name="nom" [(ngModel)]="cvData.nom" placeholder="Nom du candidat" /></div>
+            <div class="form-field"><label for="cvEmail">Adresse e-mail</label><input id="cvEmail" name="email" type="email" [(ngModel)]="cvData.email" placeholder="candidat@exemple.com" /></div>
+            <div class="form-field"><label for="cvTelephone">Téléphone</label><input id="cvTelephone" name="telephone" [(ngModel)]="cvData.telephone" placeholder="Numéro de téléphone" /></div>
+            <div class="form-field"><label for="cvAdresse">Localisation</label><input id="cvAdresse" name="adresse" [(ngModel)]="cvData.adresse" placeholder="Ville, pays" /></div>
+            <div class="form-field field-full"><label for="cvPoste">Poste actuel ou recherché</label><input id="cvPoste" name="jobtitle" [(ngModel)]="cvData.jobtitle" placeholder="Intitulé du poste" /></div>
+            <div class="form-field field-full"><label for="cvCompetences">Compétences</label><textarea id="cvCompetences" name="competences" [(ngModel)]="cvData.competences" rows="3" placeholder="Compétences extraites du CV"></textarea></div>
+            <div class="form-field field-full"><label for="cvFormation">Formation</label><textarea id="cvFormation" name="formation" [(ngModel)]="cvData.formation" rows="2" placeholder="Diplômes et formations"></textarea></div>
+            <div class="form-field field-full"><label for="cvExperience">Expérience professionnelle</label><textarea id="cvExperience" name="experience" [(ngModel)]="cvData.experience" rows="3" placeholder="Expériences professionnelles"></textarea></div>
+            <div class="form-field field-full"><label for="cvLangues">Langues</label><textarea id="cvLangues" name="langues" [(ngModel)]="cvData.langues" rows="2" placeholder="Langues et niveaux"></textarea></div>
+          </div>
+          <button type="submit" class="btn-primary full-button" [disabled]="isSaving">
+            <span *ngIf="!isSaving">Enregistrer le profil</span><span *ngIf="isSaving">Enregistrement…</span>
+            <svg *ngIf="!isSaving" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l3 3v15H4V3h1ZM8 3v6h8V3M8 21v-7h8v7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+          </button>
+        </form>
+      </article>
+    </section>
+
+    <section class="panel ai-panel" *ngIf="formulaireVisible">
+      <div class="panel-heading">
+        <div class="panel-icon green-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.7"/></svg></div>
+        <div><h2>Évaluation de correspondance IA</h2><p>Comparez le profil du candidat aux critères d’un poste cible.</p></div>
       </div>
-    </div>
-  </div>
-  
-<div class="ia-form-container" *ngIf="formulaireVisible">
-  <h3 class="ia-title"> Test du profil par IA</h3>
 
-  <!-- Poste recherché -->
-  <div class="ia-field">
-    <label for="poste"> Poste recherché</label>
-    <select id="poste" [(ngModel)]="critere.poste" (change)="mettreAJourCompetences()">
-      <option value="" disabled selected>-- Sélectionner un poste --</option>
-      <option *ngFor="let metier of metiers" [value]="metier.value">{{ metier.label }}</option>
-    </select>
-  </div>
+      <div class="ai-form-grid">
+        <div class="form-field"><label for="poste">Poste recherché</label><select id="poste" name="poste" [(ngModel)]="critere.poste" (change)="mettreAJourCompetences()"><option value="">Sélectionner un poste</option><option *ngFor="let metier of metiers" [value]="metier.value">{{ metier.label }}</option></select></div>
+        <div class="form-field"><label for="location">Localisation souhaitée</label><input id="location" name="location" [(ngModel)]="critere.location" placeholder="Ex. : Tunis" /></div>
+        <div class="form-field"><label for="expCand">Expérience du candidat (années)</label><input id="expCand" name="expCand" type="number" min="0" [(ngModel)]="critere.exp_candidat" /></div>
+        <div class="form-field"><label for="expReq">Expérience minimale requise (années)</label><input id="expReq" name="expReq" type="number" min="0" [(ngModel)]="critere.experience" /></div>
+      </div>
 
-  <!-- Compétences requises -->
-  <div class="ia-field" *ngIf="competencesAssociees.length > 0">
-    <label> Compétences requises</label>
-    <div class="skills-grid">
-      <label *ngFor="let skill of competencesAssociees" class="skill-checkbox">
-        <input type="checkbox" [value]="skill" (change)="mettreAJourSkills($event)" />
-        {{ skill }}
-      </label>
-    </div>
-  </div>
+      <div class="skills-section" *ngIf="competencesAssociees.length">
+        <div class="skills-heading"><h3>Compétences requises</h3><span>Choisissez les compétences à comparer</span></div>
+        <div class="skills-bubbles"><label class="skill-bubble" *ngFor="let skill of competencesAssociees"><input type="checkbox" [value]="skill" [checked]="isSkillSelected(skill)" (change)="mettreAJourSkills($event)" /><span class="skill-check">✓</span>{{ skill }}</label></div>
+      </div>
 
-  <!-- Localisation -->
-  <div class="ia-field">
-    <label for="location"> Localisation souhaitée</label>
-    <input id="location" [(ngModel)]="critere.location" placeholder="ex: Tunis" />
-  </div>
+      <div class="ai-actions"><button type="button" class="btn-primary" (click)="testerIaProfil()" [disabled]="!critere.poste || isEvaluating"><span *ngIf="!isEvaluating">Lancer l’évaluation IA</span><span *ngIf="isEvaluating">Évaluation en cours…</span><svg *ngIf="!isEvaluating" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.7"/></svg></button></div>
 
-  <!-- Expérience candidat -->
-  <div class="ia-field">
-    <label for="expCand"> Années d'expérience du candidat (dans ce domaine)</label>
-    <input id="expCand" type="number" min="0" [(ngModel)]="critere.exp_candidat" />
-  </div>
+      <div class="ai-result" *ngIf="resultatIa">
+        <div class="ai-result-heading"><div><span class="page-eyebrow">RÉSULTAT DU MODÈLE</span><h3>Évaluation du candidat</h3></div><span class="result-status" [class.status-recommended]="resultatIa.recommande" [class.status-not-recommended]="!resultatIa.recommande">{{ resultatIa.recommande ? 'Recommandé' : 'À examiner' }}</span></div>
+        <div class="result-summary-grid"><div><span>Nom du candidat</span><strong>{{ cvData?.nom || 'Non précisé' }}</strong></div><div><span>Poste ciblé</span><strong>{{ critere.poste || 'Non précisé' }}</strong></div><div><span>Localisation</span><strong>{{ critere.location || 'Non précisée' }}</strong></div><div><span>Expérience requise</span><strong>{{ critere.experience || 0 }} an(s)</strong></div></div>
+        <div class="ai-score-block"><div class="ai-score-label"><span>Score de correspondance</span><strong>{{ resultatIa.score }}%</strong></div><div class="ai-score-track"><span [style.width.%]="resultatIa.score" [class.score-medium]="resultatIa.score >= 50 && resultatIa.score < 75" [class.score-low]="resultatIa.score < 50"></span></div></div>
+        <div class="ai-explanation"><strong>Analyse du modèle</strong><pre>{{ resultatIa.message || 'Aucun commentaire fourni par le modèle.' }}</pre></div>
+        <p class="human-review-note">Cette évaluation est une aide à la décision. La validation finale doit rester sous la responsabilité du recruteur.</p>
+      </div>
+    </section>
 
-  <!-- Expérience exigée -->
-  <div class="ia-field">
-    <label for="expReq"> Années d'expérience minimale exigée</label>
-    <input id="expReq" type="number" min="0" [(ngModel)]="critere.experience" />
-  </div>
-
-  <!-- Lancer IA -->
-  <div class="ia-button">
-    <button class="btn-launch" (click)="testerIaProfil()">⚙️ Lancer IA</button>
-  </div>
-
- <div *ngIf="resultatIa" class="ia-result-card">
-  <h3 class="result-title">Résultat de l'évaluation IA</h3>
-
-  <div class="candidate-summary">
-    <p><strong>Nom du candidat :</strong> {{ cvData.nom || 'Non précisé' }}</p>
-    <p><strong>Poste ciblé :</strong> {{ critere.poste || 'Non précisé' }}</p>
-    <p><strong>Localisation souhaitée :</strong> {{ critere.location || 'Non précisée' }}</p>
-    <p><strong>Expérience exigée :</strong> {{ critere.experience || 0 }} an(s)</p>
-  </div>
-
-  <div class="score-section">
-    <p><strong>Score IA :</strong>
-      <span [ngClass]="{
-        'score-high': resultatIa.score >= 75,
-        'score-medium': resultatIa.score >= 50 && resultatIa.score < 75,
-        'score-low': resultatIa.score < 50
-      }">{{ resultatIa.score }}%</span>
-    </p>
-
-    <p><strong>Analyse IA :</strong></p>
-    <pre class="ia-message">{{ resultatIa.message }}</pre>
-  </div>
-
-  <div class="final-status" [ngClass]="{
-      'status-recommended': resultatIa.recommande,
-      'status-not-recommended': !resultatIa.recommande
-    }">
-    <span *ngIf="resultatIa.recommande">Ce profil est <strong>recommandé</strong>.</span>
-    <span *ngIf="!resultatIa.recommande">Ce profil <strong>ne correspond pas</strong> aux critères.</span>
-  </div>
-</div>
-
-
+    <footer class="page-footer">COFICAB · Espace RH <span>Talent Intelligence Platform</span></footer>
+  </main>
 </div>

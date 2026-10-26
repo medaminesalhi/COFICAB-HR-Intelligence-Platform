@@ -1,17 +1,13 @@
 import { Component } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { Router } from '@angular/router';  // <-- Ajout important
+import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    HttpClientModule
-  ],
+  imports: [CommonModule, FormsModule],
   templateUrl: './login.html',
   styleUrls: ['./login.css']
 })
@@ -19,33 +15,46 @@ export class LoginComponent {
   email = '';
   password = '';
   errorMessage = '';
+  isLoading = false;
 
-  constructor(private http: HttpClient, private router: Router) {}  // <-- Ajout Router
+  constructor(
+    private readonly http: HttpClient,
+    private readonly router: Router
+  ) {}
 
-  login() {
-    if (!this.email || !this.password) {
-      this.errorMessage = 'Veuillez remplir tous les champs.';
+  login(): void {
+    if (this.isLoading) return;
+
+    const email = this.email.trim();
+    if (!email || !this.password) {
+      this.errorMessage = 'Veuillez renseigner votre adresse e-mail et votre mot de passe.';
       return;
     }
 
     this.errorMessage = '';
+    this.isLoading = true;
 
     this.http.post<any>('http://127.0.0.1:5000/api/login', {
-      email: this.email,
+      email,
       password: this.password
     }).subscribe({
       next: (res) => {
-        if (res.success) {
-          alert('Connexion réussie !');
+        this.isLoading = false;
+
+        if (res?.success && res?.token) {
           localStorage.setItem('token', res.token);
-          localStorage.setItem('user_nom', res.user.nom);  // 👈 Sauvegarde nom
-          this.router.navigate(['/dashboard']);  // ✅ Redirection ici
-        } else {
-          this.errorMessage = res.message;
+          if (res.user?.nom) {
+            localStorage.setItem('user_nom', res.user.nom);
+          }
+          void this.router.navigate(['/dashboard']);
+          return;
         }
+
+        this.errorMessage = res?.message || 'Identifiants incorrects. Vérifiez vos informations.';
       },
       error: (err) => {
-        this.errorMessage = err.error?.message || 'Erreur serveur';
+        this.isLoading = false;
+        this.errorMessage = err?.error?.message || 'Impossible de contacter le serveur. Vérifiez que le backend est démarré.';
       }
     });
   }

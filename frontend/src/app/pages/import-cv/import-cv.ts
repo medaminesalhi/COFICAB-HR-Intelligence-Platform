@@ -1,26 +1,35 @@
-import { Component } from '@angular/core';
+import { Component, afterNextRender, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { Router, RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-import-cv',
   standalone: true,
-  imports: [CommonModule, FormsModule, HttpClientModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './import-cv.html',
   styleUrls: ['./import-cv.css']
 })
 export class ImportCvComponent {
-  fileName: string = '';
-  pdfUrl: string = '';
-  safePdfUrl!: SafeResourceUrl;
+  readonly isBrowser = signal(false);
+
+  nomUtilisateur = '';
+  fileName = '';
+  pdfUrl = '';
+  safePdfUrl: SafeResourceUrl | null = null;
   cvData: any = null;
-  selectedFile!: File;
+  selectedFile?: File;
   formulaireVisible = false;
   resultatIa: any = null;
 
-  // ✅ Formulaire IA
+  isScraping = false;
+  isSaving = false;
+  isEvaluating = false;
+  errorMessage = '';
+  successMessage = '';
+
   critere = {
     poste: '',
     skills: '',
@@ -30,109 +39,182 @@ export class ImportCvComponent {
   };
 
   metiers = [
-    { label: "Data Scientist", value: "data_scientist" },
-    { label: "Data Analyst", value: "data_analyst" },
-    { label: "Data Engineer", value: "data_engineer" },
-    { label: "ML Engineer", value: "ml_engineer" },
-    { label: "DevOps Engineer", value: "devops_engineer" },
-    { label: "Backend Developer", value: "backend_dev" },
-    { label: "Frontend Developer", value: "frontend_dev" },
-    { label: "Full Stack Developer", value: "fullstack_dev" },
-    { label: "Cloud Engineer", value: "cloud_engineer" },
-    { label: "BI Analyst", value: "bi_analyst" },
-    { label: "QA Engineer", value: "qa_engineer" },
-    { label: "Scrum Master", value: "scrum_master" },
-    { label: "Architecte Logiciel", value: "software_architect" },
-    { label: "Admin Systèmes & Réseaux", value: "sysadmin" },
-    { label: "Ingénieur Sécurité", value: "cybersecurity_engineer" }
+    { label: 'Data Scientist', value: 'data_scientist' },
+    { label: 'Data Analyst', value: 'data_analyst' },
+    { label: 'Data Engineer', value: 'data_engineer' },
+    { label: 'ML Engineer', value: 'ml_engineer' },
+    { label: 'DevOps Engineer', value: 'devops_engineer' },
+    { label: 'Backend Developer', value: 'backend_dev' },
+    { label: 'Frontend Developer', value: 'frontend_dev' },
+    { label: 'Full Stack Developer', value: 'fullstack_dev' },
+    { label: 'Cloud Engineer', value: 'cloud_engineer' },
+    { label: 'BI Analyst', value: 'bi_analyst' },
+    { label: 'QA Engineer', value: 'qa_engineer' },
+    { label: 'Scrum Master', value: 'scrum_master' },
+    { label: 'Architecte Logiciel', value: 'software_architect' },
+    { label: 'Admin Systèmes & Réseaux', value: 'sysadmin' },
+    { label: 'Ingénieur Sécurité', value: 'cybersecurity_engineer' }
   ];
 
   competenceParPoste: { [key: string]: string[] } = {
-    data_scientist: ["python", "pandas", "scikit-learn", "matplotlib", "sql"],
-    data_analyst: ["sql", "excel", "power bi", "tableau", "python"],
-    data_engineer: ["spark", "hadoop", "airflow", "python", "etl"],
-    ml_engineer: ["tensorflow", "keras", "scikit-learn", "mlflow", "python"],
-    devops_engineer: ["docker", "kubernetes", "ansible", "jenkins", "terraform"],
-    backend_dev: ["java", "python", "node.js", "sql", "spring boot"],
-    frontend_dev: ["html", "css", "javascript", "react", "vue.js"],
-    fullstack_dev: ["javascript", "node.js", "react", "sql", "mongodb"],
-    cloud_engineer: ["aws", "azure", "gcp", "terraform", "devops"],
-    bi_analyst: ["power bi", "tableau", "sql", "dashboards", "etl"],
-    qa_engineer: ["selenium", "cypress", "postman", "jira", "test automation"],
-    scrum_master: ["agile", "scrum", "kanban", "jira", "planning"],
-    software_architect: ["uml", "microservices", "architecture logicielle", "design patterns", "java"],
-    sysadmin: ["linux", "windows server", "bash", "ssh", "networking"],
-    cybersecurity_engineer: ["nmap", "firewall", "kali linux", "wireshark", "encryption"]
+    data_scientist: ['python', 'pandas', 'scikit-learn', 'matplotlib', 'sql'],
+    data_analyst: ['sql', 'excel', 'power bi', 'tableau', 'python'],
+    data_engineer: ['spark', 'hadoop', 'airflow', 'python', 'etl'],
+    ml_engineer: ['tensorflow', 'keras', 'scikit-learn', 'mlflow', 'python'],
+    devops_engineer: ['docker', 'kubernetes', 'ansible', 'jenkins', 'terraform'],
+    backend_dev: ['java', 'python', 'node.js', 'sql', 'spring boot'],
+    frontend_dev: ['html', 'css', 'javascript', 'react', 'vue.js'],
+    fullstack_dev: ['javascript', 'node.js', 'react', 'sql', 'mongodb'],
+    cloud_engineer: ['aws', 'azure', 'gcp', 'terraform', 'devops'],
+    bi_analyst: ['power bi', 'tableau', 'sql', 'dashboards', 'etl'],
+    qa_engineer: ['selenium', 'cypress', 'postman', 'jira', 'test automation'],
+    scrum_master: ['agile', 'scrum', 'kanban', 'jira', 'planning'],
+    software_architect: ['uml', 'microservices', 'architecture logicielle', 'design patterns', 'java'],
+    sysadmin: ['linux', 'windows server', 'bash', 'ssh', 'networking'],
+    cybersecurity_engineer: ['nmap', 'firewall', 'kali linux', 'wireshark', 'encryption']
   };
 
   competencesAssociees: string[] = [];
 
-  constructor(private http: HttpClient, private sanitizer: DomSanitizer) {}
+  get initialeUtilisateur(): string {
+    const nom = this.nomUtilisateur.trim();
+    return nom ? nom.charAt(0).toUpperCase() : 'U';
+  }
 
-  // 📄 Gestion du fichier CV
-  onFileSelected(event: any) {
-    const file = event.target.files[0];
+  get isPdfSelected(): boolean {
+    return !!this.selectedFile && this.selectedFile.name.toLowerCase().endsWith('.pdf');
+  }
+
+  constructor(
+    private readonly http: HttpClient,
+    private readonly sanitizer: DomSanitizer,
+    private readonly router: Router
+  ) {
+    // Accès au stockage uniquement dans le navigateur, jamais pendant le SSR.
+    afterNextRender(() => {
+      this.isBrowser.set(true);
+      this.nomUtilisateur = localStorage.getItem('user_nom') || '';
+    });
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
     if (!file) return;
 
-    this.fileName = file.name;
+    const allowedExtensions = ['.pdf', '.doc', '.docx'];
+    const lowerName = file.name.toLowerCase();
+    if (!allowedExtensions.some((extension) => lowerName.endsWith(extension))) {
+      this.errorMessage = 'Format non pris en charge. Sélectionnez un fichier PDF, DOC ou DOCX.';
+      input.value = '';
+      return;
+    }
+
+    this.releasePdfUrl();
     this.selectedFile = file;
-    this.pdfUrl = URL.createObjectURL(file);
-    this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.pdfUrl);
-    console.log("📄 URL du PDF :", this.pdfUrl);
-  }
-
-  resetFichier() {
-    this.fileName = '';
-    this.pdfUrl = '';
-    this.safePdfUrl = '' as any;
+    this.fileName = file.name;
     this.cvData = null;
-    this.selectedFile = undefined!;
+    this.formulaireVisible = false;
+    this.resultatIa = null;
+    this.errorMessage = '';
+    this.successMessage = '';
+
+    if (lowerName.endsWith('.pdf')) {
+      this.pdfUrl = URL.createObjectURL(file);
+      this.safePdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.pdfUrl);
+    }
   }
 
-  // 🔍 Scraper contenu du CV
-  scraperCv() {
-    if (!this.selectedFile) return;
+  resetFichier(fileInput?: HTMLInputElement): void {
+    this.releasePdfUrl();
+    this.fileName = '';
+    this.selectedFile = undefined;
+    this.cvData = null;
+    this.formulaireVisible = false;
+    this.resultatIa = null;
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.safePdfUrl = null;
+    if (fileInput) fileInput.value = '';
+  }
+
+  private releasePdfUrl(): void {
+    if (this.pdfUrl) URL.revokeObjectURL(this.pdfUrl);
+    this.pdfUrl = '';
+    this.safePdfUrl = null;
+  }
+
+  scraperCv(): void {
+    if (!this.selectedFile || this.isScraping) return;
+
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.isScraping = true;
 
     const formData = new FormData();
     formData.append('cv', this.selectedFile);
 
     this.http.post<any>('http://localhost:5000/api/scrape_cv', formData).subscribe({
       next: (res) => {
-        console.log("✅ Données scrappées :", res);
-        this.cvData = res;
+        this.isScraping = false;
+        this.cvData = res ?? {};
+        if (Array.isArray(this.cvData.competences)) {
+          this.cvData.competences = this.cvData.competences.join(', ');
+        }
+        this.successMessage = 'Extraction terminée. Vérifiez les informations avant de les enregistrer.';
       },
       error: (err) => {
-        console.error("❌ Erreur scraping :", err);
+        console.error('Erreur lors de l’extraction du CV :', err);
+        this.isScraping = false;
+        this.errorMessage = err?.error?.message || 'L’extraction a échoué. Vérifiez que le backend est démarré et réessayez.';
       }
     });
   }
 
-  // 💾 Enregistrement profil
-  enregistrerProfil() {
-    this.http.post('http://localhost:5000/api/save_profile', this.cvData).subscribe({
+  enregistrerProfil(): void {
+    if (!this.cvData || this.isSaving) return;
+
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.isSaving = true;
+
+    this.http.post<any>('http://localhost:5000/api/save_profile', this.cvData).subscribe({
       next: () => {
-        alert("✅ Profil enregistré !");
+        this.isSaving = false;
+        this.successMessage = 'Profil enregistré avec succès. Vous pouvez maintenant lancer l’évaluation IA.';
         this.formulaireVisible = true;
       },
-      error: (err) => console.error("❌ Erreur d'enregistrement :", err)
+      error: (err) => {
+        console.error('Erreur lors de l’enregistrement du profil :', err);
+        this.isSaving = false;
+        this.errorMessage = err?.error?.message || 'Impossible d’enregistrer le profil. Vérifiez le backend.';
+      }
     });
   }
 
-  // 🧠 Tester le profil par IA
-  testerIaProfil() {
-    let competences_cleaned = this.cvData.competences;
-    if (typeof competences_cleaned === 'string') {
-      competences_cleaned = competences_cleaned
+  testerIaProfil(): void {
+    if (!this.cvData || this.isEvaluating) return;
+
+    this.errorMessage = '';
+    this.successMessage = '';
+    this.resultatIa = null;
+    this.isEvaluating = true;
+
+    let competencesCleaned: string[] = [];
+    if (Array.isArray(this.cvData.competences)) {
+      competencesCleaned = this.cvData.competences;
+    } else if (typeof this.cvData.competences === 'string') {
+      competencesCleaned = this.cvData.competences
         .split(/[,;\n]/)
-        .map(c => c.trim())
-        .filter(c => c.length > 1);
+        .map((competence: string) => competence.trim())
+        .filter((competence: string) => competence.length > 1);
     }
 
     const payload = {
       candidat: {
         ...this.cvData,
-        competences: competences_cleaned,
-        experience: this.critere.exp_candidat  // 👈 injecte l’expérience réelle ici
+        competences: competencesCleaned,
+        experience: this.critere.exp_candidat
       },
       criteres: {
         poste: this.critere.poste,
@@ -144,28 +226,47 @@ export class ImportCvComponent {
 
     this.http.post<any>('http://localhost:5000/api/predict_match', payload).subscribe({
       next: (res) => {
+        this.isEvaluating = false;
         this.resultatIa = res;
       },
       error: (err) => {
-        console.error("❌ Erreur IA :", err);
-        alert("Erreur lors de l'évaluation IA.");
+        console.error('Erreur lors de l’évaluation IA :', err);
+        this.isEvaluating = false;
+        this.errorMessage = err?.error?.message || 'L’évaluation IA a échoué. Vérifiez que le service est disponible.';
       }
     });
   }
 
-  // 🔁 Quand le recruteur change de poste
-  mettreAJourCompetences() {
-    this.competencesAssociees = this.competenceParPoste[this.critere.poste] || [];
-    this.critere.skills = "";
+  isSkillSelected(skill: string): boolean {
+    return this.critere.skills.split(',').map((item) => item.trim()).includes(skill);
   }
 
-  // 🔘 Gestion des cases à cocher des compétences
-  mettreAJourSkills(event: any) {
-    const value = event.target.value;
-    if (event.target.checked) {
-      this.critere.skills += value + ", ";
-    } else {
-      this.critere.skills = this.critere.skills.replace(value + ", ", "");
+  mettreAJourCompetences(): void {
+    this.competencesAssociees = this.competenceParPoste[this.critere.poste] || [];
+    this.critere.skills = '';
+  }
+
+  mettreAJourSkills(event: Event): void {
+    const checkbox = event.target as HTMLInputElement;
+    const value = checkbox.value;
+    const selected = this.critere.skills
+      .split(',')
+      .map((skill) => skill.trim())
+      .filter(Boolean);
+
+    if (checkbox.checked && !selected.includes(value)) {
+      selected.push(value);
+    } else if (!checkbox.checked) {
+      const index = selected.indexOf(value);
+      if (index >= 0) selected.splice(index, 1);
     }
+
+    this.critere.skills = selected.join(', ');
+  }
+
+  deconnexion(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user_nom');
+    void this.router.navigate(['/login']);
   }
 }

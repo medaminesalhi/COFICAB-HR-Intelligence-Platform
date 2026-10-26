@@ -1,33 +1,104 @@
 <div class="login-page">
+  <div class="login-background-shape shape-one"></div>
+  <div class="login-background-shape shape-two"></div>
 
-  <div class="login-container">
+  <main class="login-layout">
+    <section class="welcome-panel" aria-label="Présentation de COFICAB HR">
+      <img src="/images.png" alt="COFICAB" class="brand-logo" />
 
-    <div class="title-box">
-      <h2>Bienvenue sur l’Espace RH</h2>
-    </div>
-
-    <div class="login-box">
-      <div class="logo">
-        <img src="images.png" alt="Logo" class="logo" />
+      <div class="welcome-copy">
+        <span class="eyebrow">TALENT INTELLIGENCE PLATFORM</span>
+        <h1>Le recrutement,<br /><span>éclairé par la donnée.</span></h1>
+        <p>
+          Retrouvez les profils, analysez les compétences et facilitez la mise en
+          correspondance entre les talents et les besoins de recrutement.
+        </p>
       </div>
 
-      <p class="subtitle">Connectez-vous pour accéder à votre tableau de bord</p>
+      <div class="welcome-footer">
+        <span class="footer-mark"></span>
+        <span>COFICAB · HR Intelligence</span>
+      </div>
+    </section>
 
-      <form (ngSubmit)="login()" #loginForm="ngForm">
-        <div class="form-group">
-          <input type="email" name="email" [(ngModel)]="email" placeholder="Adresse email" required />
+    <section class="login-panel" aria-labelledby="login-title">
+      <div class="login-card">
+        <div class="login-card-heading">
+          <div class="login-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" fill="none" stroke="currentColor" stroke-width="1.7" />
+              <path d="M4.5 20a7.5 7.5 0 0 1 15 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            </svg>
+          </div>
+          <span class="eyebrow">ESPACE SÉCURISÉ</span>
+          <h2 id="login-title">Bienvenue</h2>
+          <p>Connectez-vous à votre espace RH.</p>
         </div>
 
-        <div class="form-group">
-          <input type="password" name="password" [(ngModel)]="password" placeholder="Mot de passe" required />
-        </div>
+        <form (ngSubmit)="login()" #loginForm="ngForm" novalidate>
+          <div class="form-group">
+            <label for="email">Adresse e-mail</label>
+            <div class="input-wrap">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.7" />
+                <path d="m4 7 8 6 8-6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+              </svg>
+              <input
+                id="email"
+                type="email"
+                name="email"
+                [(ngModel)]="email"
+                placeholder="nom@entreprise.com"
+                autocomplete="username"
+                required
+                email />
+            </div>
+          </div>
 
-        <button type="submit" [disabled]="!loginForm.valid">Se connecter</button>
+          <div class="form-group">
+            <label for="password">Mot de passe</label>
+            <div class="input-wrap">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="4" y="10" width="16" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.7" />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+              </svg>
+              <input
+                id="password"
+                type="password"
+                name="password"
+                [(ngModel)]="password"
+                placeholder="Saisissez votre mot de passe"
+                autocomplete="current-password"
+                required />
+            </div>
+          </div>
 
-        <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
-      </form>
-    </div>
+          <div class="error-message" *ngIf="errorMessage" role="alert">
+            <span aria-hidden="true">!</span>
+            {{ errorMessage }}
+          </div>
 
-  </div>
+          <button class="login-button" type="submit" [disabled]="!loginForm.valid || isLoading">
+            <span *ngIf="!isLoading">Se connecter</span>
+            <span *ngIf="isLoading" class="button-loading">
+              <span class="spinner"></span> Connexion en cours…
+            </span>
+            <svg *ngIf="!isLoading" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </form>
 
+        <p class="security-note">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3 4.5 6v5.5c0 4.4 3.1 7.7 7.5 9.5 4.4-1.8 7.5-5.1 7.5-9.5V6L12 3Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+            <path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Accès réservé aux utilisateurs autorisés.
+        </p>
+      </div>
+
+      <p class="copyright">© COFICAB · HR Intelligence Platform</p>
+    </section>
+  </main>
 </div>

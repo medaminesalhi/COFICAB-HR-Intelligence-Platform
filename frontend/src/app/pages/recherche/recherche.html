@@ -1,108 +1,174 @@
-<!-- 🌐 Top Navigation -->
-<nav class="navbar">
-  <div class="navbar-left">
-    <img src="images.png" alt="Logo" class="logo"/>
-    <h2 class="title">Espace RH</h2>
+<header class="topbar">
+  <div class="brand">
+    <img src="/images.png" alt="Logo COFICAB" class="brand-logo" />
+    <div class="brand-copy">
+      <span class="brand-title">ESPACE RH</span>
+      <span class="brand-subtitle">Talent Intelligence Platform</span>
+    </div>
   </div>
-  <div class="navbar-right">
-    <span class="user">👤 Test User</span>
-    <button class="logout-btn">Déconnexion</button>
+
+  <div class="topbar-actions">
+    <div class="user-chip">
+      <div class="user-avatar">{{ initialeUtilisateur }}</div>
+      <div class="user-details">
+        <span class="user-name">{{ nomUtilisateur || 'Utilisateur' }}</span>
+        <span class="user-presence"><span class="status-dot"></span>En ligne</span>
+      </div>
+    </div>
+    <button type="button" class="logout-btn" (click)="deconnexion()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3m9-7h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      <span>Déconnexion</span>
+    </button>
   </div>
-</nav>
+</header>
 
-<!-- 📊 Dashboard Layout -->
-<div class="dashboard-container">
-
-  <!-- 📁 Sidebar Navigation -->
+<div class="dashboard-shell">
   <aside class="sidebar">
-    <ul>
-      <li><i class="icon">📁</i> Profils trouvés</li>
-      <li><i class="icon">📨</i> Import CV</li>
-      <li><i class="icon">📈</i> Statistiques RH</li>
-      <li><i class="icon">💬</i> Feedback IA</li>
-    </ul>
+    <div class="sidebar-section-label">ESPACE DE TRAVAIL</div>
+    <nav class="side-nav" aria-label="Navigation principale">
+      <a class="nav-link" routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="3" width="7" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="14" y="11" width="7" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="3" y="14" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+        <span class="nav-label">Tableau de bord</span><span class="nav-indicator"></span>
+      </a>
+      <a class="nav-link" routerLink="/recherche" routerLinkActive="active">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span class="nav-label">Recherche profils</span><span class="nav-indicator"></span>
+      </a>
+      <a class="nav-link" routerLink="/import-cv" routerLinkActive="active">
+        <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span class="nav-label">Import CV</span><span class="nav-indicator"></span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-footer-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7v5c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7l-8-4Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m8.5 12 2.2 2.2 4.8-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="sidebar-footer-copy"><strong>COFICAB HR</strong><span>Recruitment Intelligence</span></div>
+    </div>
   </aside>
 
-  <!-- 🔍 Main Content -->
   <main class="main-content">
-    <h2 class="section-title">🔍 Recherche de profils</h2>
+    <div class="page-heading">
+      <div>
+        <span class="page-eyebrow">ESPACE RH / TALENT SEARCH</span>
+        <h1>Recherche de profils</h1>
+        <p>Identifiez les candidats correspondant aux compétences et aux exigences du poste.</p>
+      </div>
+      <div class="result-count" *ngIf="resultats.length">
+        <strong>{{ resultats.length }}</strong><span>profil(s) trouvé(s)</span>
+      </div>
+    </div>
 
-    <!-- 🧾 Formulaire -->
-    <div class="card">
+    <section class="search-card">
+      <div class="section-heading">
+        <div class="section-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div><h2>Critères de recherche</h2><p>Affinez la sélection à l'aide des critères ci-dessous.</p></div>
+      </div>
+
       <form (ngSubmit)="rechercher()">
-        <!-- Ligne 1 -->
-        <div class="form-row">
-          <input type="text" [(ngModel)]="filtre.nom" name="nom" placeholder="Nom complet" />
-          <select [(ngModel)]="filtre.jobtitle" name="jobtitle" (change)="onJobChange()">
-            <option value="">-- Sélectionner un métier --</option>
-            <option *ngFor="let m of metiers" [value]="m">{{ m }}</option>
-          </select>
-        </div>
-
-        <!-- Ligne 2 -->
-        <div class="form-row">
-          <input type="text" [(ngModel)]="filtre.location" name="location" placeholder="Ville" />
-          <select [(ngModel)]="filtre.schooldegree" name="schooldegree">
-            <option value="">-- Sélectionner un diplôme --</option>
-            <option *ngFor="let d of diplomes" [value]="d">{{ d }}</option>
-          </select>
-        </div>
-
-        <!-- Ligne 3 -->
-        <div class="form-row">
-          <label>
-            Score min :
-            <input type="number" [(ngModel)]="filtre.score" name="score" min="0" max="1" step="0.01" />
-          </label>
-          <label>
+        <div class="filters-grid">
+          <div class="form-field">
+            <label for="nom">Nom du candidat</label>
+            <input id="nom" type="text" [(ngModel)]="filtre.nom" name="nom" placeholder="Ex. : Amine Ben Ali" />
+          </div>
+          <div class="form-field">
+            <label for="jobtitle">Métier recherché</label>
+            <select id="jobtitle" [(ngModel)]="filtre.jobtitle" name="jobtitle" (change)="onJobChange()">
+              <option value="">Tous les métiers</option>
+              <option *ngFor="let m of metiers" [value]="m">{{ m }}</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="location">Localisation</label>
+            <input id="location" type="text" [(ngModel)]="filtre.location" name="location" placeholder="Ex. : Tunis" />
+          </div>
+          <div class="form-field">
+            <label for="schooldegree">Niveau d'études</label>
+            <select id="schooldegree" [(ngModel)]="filtre.schooldegree" name="schooldegree">
+              <option value="">Tous les diplômes</option>
+              <option *ngFor="let d of diplomes" [value]="d">{{ d }}</option>
+            </select>
+          </div>
+          <div class="form-field score-field">
+            <label for="score">Score minimal <span>{{ (filtre.score * 100) | number:'1.0-0' }}%</span></label>
+            <input id="score" type="range" [(ngModel)]="filtre.score" name="score" min="0" max="1" step="0.05" />
+            <div class="range-labels"><span>0%</span><span>100%</span></div>
+          </div>
+          <label class="recommend-toggle">
             <input type="checkbox" [(ngModel)]="filtre.recommande" name="recommande" />
-            Seulement les recommandés
+            <span class="custom-check"></span>
+            <span><strong>Profils recommandés uniquement</strong><small>Afficher les candidats retenus par le modèle.</small></span>
           </label>
         </div>
 
-        <!-- ✅ Compétences dynamiques -->
-        <div class="form-row" *ngIf="competencesDispo.length">
-          <label class="skills-label">Compétences associées au métier :</label>
+        <div class="skills-section" *ngIf="competencesDispo.length">
+          <div class="skills-heading"><h3>Compétences associées au métier</h3><span>Sélectionnez une ou plusieurs compétences</span></div>
           <div class="skills-bubbles">
-            <label *ngFor="let s of competencesDispo" class="skill-bubble">
-  <input 
-    type="checkbox"
-    [checked]="filtre.skills.includes(s)"
-    (change)="mettreAJourSkills($event, s)">
-  {{ s }}
-</label>
-
+            <label *ngFor="let skill of competencesDispo" class="skill-bubble" [class.selected]="filtre.skills.includes(skill)">
+              <input type="checkbox" [checked]="filtre.skills.includes(skill)" (change)="mettreAJourSkills($event, skill)" />
+              <span class="skill-check">✓</span>{{ skill }}
+            </label>
           </div>
         </div>
 
-        <!-- Actions -->
+        <div class="form-alert error-alert" *ngIf="errorMessage" role="alert">{{ errorMessage }}</div>
+        <div class="form-alert info-alert" *ngIf="infoMessage" role="status">{{ infoMessage }}</div>
+
         <div class="form-actions">
-          <button type="submit" class="btn-search">🔍 Rechercher</button>
-          <button type="button" class="btn-reset" (click)="reset()">♻️ Réinitialiser</button>
+          <button type="button" class="btn-secondary" (click)="reset()">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Réinitialiser
+          </button>
+          <button type="submit" class="btn-primary" [disabled]="isSearching">
+            <span *ngIf="!isSearching">Lancer la recherche</span>
+            <span *ngIf="isSearching">Recherche en cours…</span>
+            <svg *ngIf="!isSearching" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
         </div>
       </form>
-    </div>
-
-    <!-- 📋 Résultats -->
-    <section class="widgets" *ngIf="resultats.length">
-      <div class="card" *ngFor="let p of resultats">
-        <h3>{{ p.fullname }}</h3>
-        <p><strong>Métier :</strong> {{ p.jobtitle }}</p>
-        <p><strong>Ville :</strong> {{ p.location }}</p>
-        <p><strong>Diplôme :</strong> {{ p.schooldegree }}</p>
-        <p><strong>Score IA :</strong> {{ p.score | number:'1.2-2' }}</p>
-        <p><strong>Prédiction :</strong>
-          <span [ngClass]="{ 'ok': p.prediction == 1, 'ko': p.prediction == 0 }">
-            {{ p.prediction == 1 ? '✅ Recommandé' : '❌ Non recommandé' }}
-          </span>
-        </p>
-        <p><strong>Compétences :</strong>
-  <span *ngFor="let c of p.competences; let i = index">
-    {{ c }}<span *ngIf="i < p.competences.length - 1">, </span>
-  </span>
-</p>
-
-      </div>
     </section>
+
+    <section class="results-section">
+      <div class="results-heading">
+        <div><span class="page-eyebrow">RÉSULTATS</span><h2>Profils correspondants</h2></div>
+        <span class="results-total" *ngIf="resultats.length">{{ resultats.length }} résultat(s)</span>
+      </div>
+
+      <div class="results-grid" *ngIf="resultats.length; else noResults">
+        <article class="candidate-card" *ngFor="let p of resultats">
+          <div class="candidate-card-top">
+            <div class="candidate-avatar">{{ (p.fullname || 'C').charAt(0).toUpperCase() }}</div>
+            <div class="candidate-heading"><h3>{{ p.fullname || 'Candidat sans nom' }}</h3><p>{{ p.jobtitle || 'Métier non renseigné' }}</p></div>
+            <span class="recommend-badge" [class.not-recommended]="p.prediction != 1">{{ p.prediction == 1 ? 'Recommandé' : 'À examiner' }}</span>
+          </div>
+
+          <div class="candidate-details">
+            <div><span class="detail-label">Localisation</span><strong>{{ p.location || 'Non renseignée' }}</strong></div>
+            <div><span class="detail-label">Formation</span><strong>{{ p.schooldegree || 'Non renseignée' }}</strong></div>
+          </div>
+
+          <div class="candidate-score-row">
+            <span>Score de correspondance</span>
+            <strong>{{ p.score | number:'1.0-2' }}</strong>
+          </div>
+          <div class="score-track"><span [style.width.%]="(p.score > 1 ? p.score : p.score * 100)" [class.score-mid]="(p.score > 1 ? p.score : p.score * 100) >= 50 && (p.score > 1 ? p.score : p.score * 100) < 75" [class.score-low]="(p.score > 1 ? p.score : p.score * 100) < 50"></span></div>
+
+          <div class="candidate-skills" *ngIf="p.competences?.length">
+            <span class="detail-label">Compétences</span>
+            <div class="result-skill-list"><span class="result-skill" *ngFor="let skill of p.competences">{{ skill }}</span></div>
+          </div>
+        </article>
+      </div>
+
+      <ng-template #noResults>
+        <div class="empty-results" *ngIf="!errorMessage && !infoMessage">
+          <div class="empty-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m16 16 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+          <h3>Aucune recherche lancée</h3>
+          <p>Choisissez vos critères, puis lancez la recherche pour afficher les profils correspondants.</p>
+        </div>
+      </ng-template>
+    </section>
+
+    <footer class="page-footer">COFICAB · Espace RH <span>Talent Intelligence Platform</span></footer>
   </main>
 </div>
