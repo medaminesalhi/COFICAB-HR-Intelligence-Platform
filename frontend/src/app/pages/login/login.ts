@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { API_BASE_URL } from '../../core/api-url';
 import { Router } from '@angular/router';
 
 @Component({
@@ -34,7 +35,7 @@ export class LoginComponent {
     this.errorMessage = '';
     this.isLoading = true;
 
-    this.http.post<any>('http://127.0.0.1:5000/api/login', {
+    this.http.post<any>(`${API_BASE_URL}/login`, {
       email,
       password: this.password
     }).subscribe({
@@ -54,7 +55,23 @@ export class LoginComponent {
       },
       error: (err) => {
         this.isLoading = false;
-        this.errorMessage = err?.error?.message || 'Impossible de contacter le serveur. Vérifiez que le backend est démarré.';
+        console.error('Erreur API de connexion :', {
+          status: err?.status,
+          error: err?.error
+        });
+
+        if (err?.status === 0) {
+          this.errorMessage = 'Le backend est inaccessible. Vérifiez que le serveur Flask fonctionne sur le port 5000.';
+        } else if (err?.status >= 500) {
+          this.errorMessage = 'Le serveur RH a rencontré une erreur. Consultez le terminal Flask pour identifier la cause.';
+        } else if (err?.status === 401) {
+          this.errorMessage = 'Adresse e-mail ou mot de passe incorrect.';
+        } else {
+          const apiMessage = typeof err?.error === 'object'
+            ? err.error?.message
+            : null;
+          this.errorMessage = apiMessage || `Échec de la connexion (HTTP ${err?.status ?? 'inconnu'}).`;
+        }
       }
     });
   }

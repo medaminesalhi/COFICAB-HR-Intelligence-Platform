@@ -1,7 +1,8 @@
-import { Component, afterNextRender, signal } from '@angular/core';
+import { Component, afterNextRender, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { API_BASE_URL } from '../../core/api-url';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Router, RouterModule } from '@angular/router';
 
@@ -12,7 +13,7 @@ import { Router, RouterModule } from '@angular/router';
   templateUrl: './import-cv.html',
   styleUrls: ['./import-cv.css']
 })
-export class ImportCvComponent {
+export class ImportCvComponent implements OnDestroy {
   readonly isBrowser = signal(false);
 
   nomUtilisateur = '';
@@ -97,15 +98,39 @@ export class ImportCvComponent {
     });
   }
 
+  ngOnDestroy(): void {
+    this.releasePdfUrl();
+  }
+
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
 
-    const allowedExtensions = ['.pdf', '.doc', '.docx'];
     const lowerName = file.name.toLowerCase();
-    if (!allowedExtensions.some((extension) => lowerName.endsWith(extension))) {
-      this.errorMessage = 'Format non pris en charge. Sélectionnez un fichier PDF, DOC ou DOCX.';
+    if (!lowerName.endsWith('.pdf')) {
+      this.releasePdfUrl();
+      this.selectedFile = undefined;
+      this.fileName = '';
+      this.cvData = null;
+      this.formulaireVisible = false;
+      this.resultatIa = null;
+      this.successMessage = '';
+      this.safePdfUrl = null;
+      this.errorMessage = 'Format non pris en charge. Sélectionnez un fichier PDF.';
+      input.value = '';
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      this.releasePdfUrl();
+      this.selectedFile = undefined;
+      this.fileName = '';
+      this.cvData = null;
+      this.formulaireVisible = false;
+      this.resultatIa = null;
+      this.successMessage = '';
+      this.safePdfUrl = null;
+      this.errorMessage = 'Le fichier dépasse la limite de 10 Mo.';
       input.value = '';
       return;
     }
@@ -154,7 +179,7 @@ export class ImportCvComponent {
     const formData = new FormData();
     formData.append('cv', this.selectedFile);
 
-    this.http.post<any>('http://localhost:5000/api/scrape_cv', formData).subscribe({
+    this.http.post<any>(`${API_BASE_URL}/scrape_cv`, formData).subscribe({
       next: (res) => {
         this.isScraping = false;
         this.cvData = res ?? {};
@@ -178,7 +203,7 @@ export class ImportCvComponent {
     this.successMessage = '';
     this.isSaving = true;
 
-    this.http.post<any>('http://localhost:5000/api/save_profile', this.cvData).subscribe({
+    this.http.post<any>(`${API_BASE_URL}/save_profile`, this.cvData).subscribe({
       next: () => {
         this.isSaving = false;
         this.successMessage = 'Profil enregistré avec succès. Vous pouvez maintenant lancer l’évaluation IA.';
@@ -224,7 +249,7 @@ export class ImportCvComponent {
       }
     };
 
-    this.http.post<any>('http://localhost:5000/api/predict_match', payload).subscribe({
+    this.http.post<any>(`${API_BASE_URL}/predict_match`, payload).subscribe({
       next: (res) => {
         this.isEvaluating = false;
         this.resultatIa = res;

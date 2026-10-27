@@ -1,109 +1,128 @@
-# Backend COFICAB — structure organisée (étape 1)
+# Backend COFICAB
 
-## Objectif de cette version
+## 1. Responsabilités
 
-Cette copie organise les fichiers backend par responsabilité et sépare explicitement les deux workflows historiques :
+Le backend Flask fournit l'API utilisée par Angular. Le workflow prioritaire pour la suite MLOps est :
 
-- **Workflow actif pour notre apprentissage MLOps :** CV PDF + critères de poste → extraction → scoring CV–poste.
-- **Workflow conservé hors du périmètre initial :** profils en base, préparation du dataset et dashboard historique.
+**CV PDF + critères du poste → extraction → prédiction CV–poste → revue RH.**
 
-Les routes API existantes sont conservées dans `app.py` pour limiter les risques de rupture. Le découpage de `app.py` en Blueprints/services sera une étape suivante, après tests de non-régression. Le projet original n'a pas été modifié.
+Le workflow de profils en base et son dashboard sont conservés dans `ml/profiles_pipeline/`, mais restent hors du périmètre MLOps initial.
 
-## Arborescence
+## 2. Structure
 
 ```text
 backend/
-├── app.py
-├── config.py
-├── requirements.txt
-├── .env.example
-├── data/
-│   ├── cv_matching/training/       # dataset supervisé CV–poste
-│   └── profiles/                   # datasets de l'ancien workflow profils
-│       ├── raw/
-│       └── processed/
+├── app.py                         # Factory Flask, configuration et enregistrement des routes
+├── config.py                      # Chemins, PostgreSQL, JWT, CORS et limites d'upload
+├── extensions.py                  # Extensions Flask partagées
+├── models.py                      # Modèle SQLAlchemy Recruteur
+├── db_utils.py                    # Connexion PostgreSQL transactionnelle
+├── routes/
+│   ├── auth.py                    # /api/login
+│   ├── cv_matching.py             # /api/scrape_cv et /api/predict_match
+│   ├── dashboard.py               # Dashboard historique
+│   └── profiles.py                # Recherche, filtres et sauvegarde des profils
+├── services/
+│   ├── cv_extraction.py           # Extraction PDF partagée par API et CLI
+│   └── cv_model_service.py        # Chargement en cache et inférence du modèle
 ├── ml/
-│   ├── cv_matching/                # workflow actif
-│   │   ├── train_cv.py
-│   │   ├── artifacts/               # modèle CV + vectoriseurs compatibles
-│   │   └── extraction/scrap_pdf_cv.py
-│   └── profiles_pipeline/           # workflow historique, conservé séparément
-│       ├── data_pipeline/
-│       ├── training/train_model.py
-│       └── artifacts/
-├── storage/                         # sorties locales non versionnées
-└── tests/
+│   ├── cv_matching/
+│   │   ├── features.py             # Préparation commune des features train/inférence
+│   │   ├── train_cv.py             # Entraîne un candidat, ne remplace pas le modèle actif
+│   │   ├── extraction/scrap_pdf_cv.py
+│   │   └── artifacts/              # Artefacts historiques actifs et candidats locaux
+│   └── profiles_pipeline/          # Workflow historique séparé
+├── data/                           # Datasets locaux de développement
+├── storage/                        # Sorties locales ; CV temporaires non versionnés
+└── tests/                          # Tests unitaires et tests API
 ```
 
-Les CV PDF historiques, `cv_output.json` (qui contenait des informations personnelles) et `__pycache__` n'ont pas été copiés. `/api/scrape_cv` lit désormais le PDF en mémoire et ne l'enregistre pas durablement.
+## 3. Installation locale
 
-## Installation
-
-Depuis ce dossier `backend/`, avec Python 3.11 ou 3.12 :
-
-```bash
-python -m venv .venv
-# Windows PowerShell : .venv\\Scripts\\Activate.ps1
-# Linux/macOS : source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-Copier `.env.example` vers `.env` et adapter les paramètres PostgreSQL/JWT. Ne jamais publier `.env`.
+Depuis ce dossier :
 
 ```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Puis lancer l'API depuis le dossier `backend/` :
+Modifiez `.env` avant de lancer le backend. Utilisez un mot de passe PostgreSQL valide et une clé JWT longue et aléatoire. En production, `APP_ENV=production` sans clé JWT configurée bloque le démarrage.
 
-```bash
+Démarrer l'API :
+
+```powershell
 python app.py
 ```
 
-Le backend a besoin d'un serveur PostgreSQL et des tables attendues par les routes. Cette archive ne contient pas la base de données.
+Test de santé : `http://127.0.0.1:5000/api/health`.
 
-## Commandes du workflow CV–poste (notre périmètre MLOps)
+Les tables PostgreSQL doivent déjà exister. Cette archive ne contient pas de migration ou de dump SQL permettant de garantir le schéma de la base.
 
-Depuis le dossier `backend/` :
+## 4. Endpoints
 
-```bash
+| Endpoint | Authentification | Fonction |
+|---|---|---|
+| `POST /api/login` | Non | Authentification du recruteur |
+| `GET /api/health` | Non | Vérification de disponibilité de l'API |
+| `POST /api/scrape_cv` | JWT | Extraction heuristique d'un CV PDF |
+| `POST /api/predict_match` | JWT | Score indicatif CV–poste et sauvegarde de l'évaluation |
+| `POST /api/save_profile` | JWT | Sauvegarde du profil extrait |
+| `GET /api/dashboard` | JWT | Indicateurs du workflow historique |
+| `POST /api/recherche-profils` | JWT | Recherche et filtres sur les profils |
+| `GET /api/metiers` | JWT | Liste des métiers |
+| `GET /api/diplomes` | JWT | Liste des diplômes |
+
+Les réponses d'erreur utilisent `success: false` et `message`. Les PDF sont lus en mémoire par l'API ; la limite par défaut est 10 Mo. Les PDF scannés sans couche texte ne sont pas traités par OCR.
+
+## 5. Modèle CV–poste
+
+Le service de prédiction prend en charge deux modes :
+
+1. le modèle historique et ses trois vectoriseurs, pour assurer la compatibilité avec l'archive actuelle ;
+2. un pipeline scikit-learn unifié nommé `cv_matching_pipeline.joblib`, lorsqu'une version candidate aura été examinée et explicitement promue.
+
+Les artefacts sont chargés en cache, pas à chaque requête. Pour appliquer une nouvelle version, redémarrez le backend après la promotion contrôlée. La version historique est indiquée `legacy-unversioned`, car aucun manifeste fiable n'était fourni avec les anciens artefacts.
+
+### Entraîner un candidat
+
+Depuis `backend/` :
+
+```powershell
 python -m ml.cv_matching.train_cv
-python -m ml.cv_matching.extraction.scrap_pdf_cv chemin/vers/cv.pdf
+```
+
+Le script vérifie le schéma, sépare les données avant l'ajustement du prétraitement, utilise un `Pipeline`, calcule les métriques et écrit un candidat sous `ml/cv_matching/artifacts/candidates/`. Il ne remplace pas le modèle actif.
+
+**Important :** le dataset actuel possède 500 lignes et une cible `recrute` équilibrée, mais la provenance de cette cible n'est pas documentée. Les métriques obtenues ne prouvent pas que le modèle prédit une compatibilité ou un recrutement réel. Validez la signification des labels et les données avant toute promotion.
+
+## 6. Tests
+
+```powershell
 pytest -q
 ```
 
-Le script d'entraînement CV utilise `data/cv_matching/training/profils_training_balanced.csv` et écrit ses artefacts dans `ml/cv_matching/artifacts/`.
+Les tests vérifient la configuration, la validation des colonnes/features, l'extraction PDF de base et les contrôles d'accès API. Les tests API sont ignorés si les dépendances Flask ne sont pas installées.
 
-## Workflow profils historique (non prioritaire pour les premières phases)
+## 7. Sécurité
 
-Ces scripts sont conservés séparément afin de ne pas confondre les modèles et les datasets :
+- Ne versionnez pas `.env`, les CV, les JSON d'extraction ou les CSV pouvant contenir des données personnelles.
+- Les endpoints CV et les opérations de sauvegarde sont protégés par JWT.
+- CORS est limité aux origines configurées dans `.env`.
+- Les fichiers uploadés sont soumis à une limite de taille et l'API n'enregistre pas le PDF brut.
+- Les erreurs serveur sont journalisées côté serveur sans renvoyer les détails d'exception au client.
+- Le score est indicatif. Le recruteur conserve la décision finale.
+- Pour une production réelle, prévoir politique de conservation, contrôle d'accès, gestion des secrets, limitation de débit, sauvegardes et audit de sécurité.
 
-```bash
-python -m ml.profiles_pipeline.data_pipeline.prepare_raw
-python -m ml.profiles_pipeline.data_pipeline.import_csv_to_raw
-python -m ml.profiles_pipeline.data_pipeline.prepare_ml_ready
-python -m ml.profiles_pipeline.training.train_model
-```
+## 8. Limites connues et prochaines étapes MLOps
 
-**Ne lance pas ces scripts sans sauvegarder la base et vérifier les tables.** Le code historique supprime/reconstruit des tables (`DELETE FROM raw_profiles`, vidage de `ml_ready_profiles`, `TRUNCATE TABLE scored_profiles`). Ces opérations doivent être corrigées avant usage en production.
+1. Confirmer la définition et l'origine des labels.
+2. Vérifier la compatibilité des artefacts `.joblib` avec les versions de Python/scikit-learn installées.
+3. Ajouter un schéma d'annotation RH pour les couples candidat–poste.
+4. Intégrer MLflow Tracking puis le registre de modèles.
+5. Ajouter les tests de non-régression, CI, Docker et orchestration.
+6. Ajouter un monitoring de qualité et de dérive lorsque des données de référence sont disponibles.
 
-## Configuration centralisée
-
-`config.py` contient les chemins et paramètres partagés. Les identifiants sont lus depuis `.env` ou les variables d'environnement. Les artefacts CV et les artefacts du workflow profils sont rangés séparément afin de ne pas mélanger des modèles entraînés pour des objectifs différents.
-
-Les versions de `requirements.txt` sont un point de départ basé sur l'inventaire fourni avec le projet ; elles doivent être testées avec les `.joblib` existants. Des modèles `joblib`/scikit-learn peuvent ne pas être compatibles entre versions.
-
-## Limites connues — prochaines étapes
-
-1. Vérifier la provenance et la définition du label `recrute` dans le dataset CV–poste.
-2. Corriger le prétraitement de `train_cv.py` : les vectoriseurs sont actuellement ajustés avant le split train/test.
-3. Mesurer une baseline fiable avant tout changement du modèle.
-4. Découper `app.py` en Blueprints (`auth`, `profiles`, `cv_matching`) et services sans changer les contrats API.
-5. Ajouter les tests d'intégration API et de compatibilité des artefacts.
-6. Intégrer MLflow Tracking, puis le registre et les critères de promotion.
-7. Ajouter CI, Docker et orchestration après stabilisation.
-
-## Sécurité et données personnelles
-
-Les CSV fournis sont des données de développement et peuvent contenir des informations de profils. Ils sont présents dans cette archive pour conserver le contexte du projet, mais `.gitignore` empêche leur ajout accidentel au dépôt. Ne les pousse pas vers un dépôt public. Les CV PDF historiques et le JSON extrait ont été omis. Vérifier les autorisations et la durée de conservation avant toute collecte ou annotation.
+Le workflow historique `profiles_pipeline` est conservé pour le contexte, mais son label `recrute` est dérivé de `nombrestage >= 2`. Son entraînement a été rendu explicitement expérimental et n'écrit plus dans les tables de scores actives par défaut.

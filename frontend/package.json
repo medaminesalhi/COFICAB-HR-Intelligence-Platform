@@ -1,6 +1,6 @@
 {
-  "name": "projet",
-  "version": "0.0.0",
+  "name": "coficab-hr-intelligence",
+  "version": "1.0.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",

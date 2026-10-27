@@ -7,6 +7,8 @@ import {
 } from '@angular/core';
 
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
+import { API_BASE_URL } from '../../core/api-url';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { BaseChartDirective } from 'ng2-charts';
@@ -208,7 +210,8 @@ export class DashboardComponent {
 
   constructor(
     private readonly http: HttpClient,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly router: Router
   ) {
     // Exécuté après le rendu initial dans le navigateur,
     // pas pendant le rendu serveur.
@@ -234,7 +237,7 @@ export class DashboardComponent {
     }
 
     this.http.get<any>(
-      'http://localhost:5000/api/dashboard',
+      `${API_BASE_URL}/dashboard`,
       {
         headers: {
           Authorization: `Bearer ${token}`
@@ -242,7 +245,6 @@ export class DashboardComponent {
       }
     ).subscribe({
       next: (res) => {
-        console.log('Données du dashboard reçues :', res);
         this.injecterDonnees(res ?? {});
       },
       error: (err) => {
@@ -414,7 +416,8 @@ export class DashboardComponent {
   }
 
   deconnexion(): void {
-    localStorage.clear();
-    window.location.href = '/login';
+    localStorage.removeItem('token');
+    localStorage.removeItem('user_nom');
+    void this.router.navigate(['/login']);
   }
 }

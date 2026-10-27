@@ -1,8 +1,9 @@
-import { Component, afterNextRender, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, afterNextRender, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router, RouterModule } from '@angular/router';
+import { API_BASE_URL } from '../../core/api-url';
 
 @Component({
   selector: 'app-recherche',
@@ -64,12 +65,22 @@ export class RechercheComponent {
 
   constructor(
     private readonly http: HttpClient,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly cdr: ChangeDetectorRef
   ) {
-    // Le stockage navigateur et les appels API sont lancés après le rendu client.
+    // Accès au stockage uniquement dans le navigateur (compatible SSR).
     afterNextRender(() => {
       this.isBrowser.set(true);
       this.nomUtilisateur = localStorage.getItem('user_nom') || '';
+      // Actualise la vue après la lecture du nom pour éviter NG0100.
+      this.cdr.detectChanges();
+
+      // Les endpoints métiers/diplômes sont protégés par JWT.
+      if (!localStorage.getItem('token')) {
+        void this.router.navigate(['/login']);
+        return;
+      }
+
       this.chargerMetiers();
       this.chargerDiplomes();
     });
@@ -84,7 +95,7 @@ export class RechercheComponent {
 
     const headers = this.getAuthHeaders();
     this.http.post<any>(
-      'http://localhost:5000/api/recherche-profils',
+      `${API_BASE_URL}/recherche-profils`,
       this.filtre,
       { headers }
     ).subscribe({
@@ -106,8 +117,9 @@ export class RechercheComponent {
       },
       error: (err) => {
         console.error('Erreur lors de la recherche des profils :', err);
-        this.errorMessage = err?.error?.message || 'La recherche a échoué. Vérifiez votre connexion au serveur.';
+        this.errorMessage = this.getApiErrorMessage(err, 'La recherche a échoué. Vérifiez le backend.');
         this.isSearching = false;
+        this.handleAuthError(err);
       }
     });
   }
@@ -130,7 +142,7 @@ export class RechercheComponent {
 
   chargerMetiers(): void {
     this.http.get<any>(
-      'http://localhost:5000/api/metiers',
+      `${API_BASE_URL}/metiers`,
       { headers: this.getAuthHeaders() }
     ).subscribe({
       next: (data) => {
@@ -138,13 +150,14 @@ export class RechercheComponent {
       },
       error: (err) => {
         console.error('Erreur lors du chargement des métiers :', err);
+        this.handleAuthError(err);
       }
     });
   }
 
   chargerDiplomes(): void {
     this.http.get<any>(
-      'http://localhost:5000/api/diplomes',
+      `${API_BASE_URL}/diplomes`,
       { headers: this.getAuthHeaders() }
     ).subscribe({
       next: (data) => {
@@ -152,6 +165,7 @@ export class RechercheComponent {
       },
       error: (err) => {
         console.error('Erreur lors du chargement des diplômes :', err);
+        this.handleAuthError(err);
       }
     });
   }
@@ -159,6 +173,30 @@ export class RechercheComponent {
   onJobChange(): void {
     this.competencesDispo = this.skillsMap[this.filtre.jobtitle] || [];
     this.filtre.skills = [];
+  }
+
+  private getApiErrorMessage(err: any, fallback: string): string {
+    if (err?.status === 0) {
+      return 'Backend inaccessible. Vérifiez que Flask fonctionne sur le port 5000.';
+    }
+    if (err?.status >= 500) {
+      return 'Erreur interne du serveur. Consultez le terminal Flask.';
+    }
+    if (err?.status === 401) {
+      return 'Session expirée ou jeton invalide. Veuillez vous reconnecter.';
+    }
+    return (typeof err?.error === 'object' ? err.error?.message : null)
+      || `${fallback} (HTTP ${err?.status ?? 'inconnu'}).`;
+  }
+
+  private handleAuthError(err: any): void {
+    // Les routes /api/metiers, /api/diplomes et /api/recherche-profils
+    // sont protégées par @jwt_required() côté Flask.
+    if (err?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_nom');
+      void this.router.navigate(['/login']);
+    }
   }
 
   private getAuthHeaders(): HttpHeaders {

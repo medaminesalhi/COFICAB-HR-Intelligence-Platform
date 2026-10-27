@@ -1,135 +1,140 @@
-import pandas as pd
-import psycopg2
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, accuracy_score
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.preprocessing import StandardScaler
-from scipy.sparse import hstack, csr_matrix
+"""Entraînement candidat du workflow historique de profils.
+
+Ce workflow est déprécié pour la recommandation RH : sa cible `recrute` est
+construite à partir du nombre de stages et ne correspond pas à un résultat réel
+de recrutement. Le script exige donc une confirmation explicite et n'écrit ni
+dans le registre actif ni dans scored_profiles.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import logging
+from datetime import datetime, timezone
+from pathlib import Path
+
 import joblib
-from config import DATABASE_CONFIG, PROFILE_MODEL_DIR
+import pandas as pd
+import sklearn
+from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics import accuracy_score, classification_report, f1_score, precision_score, recall_score
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
 
-# Connexion PostgreSQL
-conn = psycopg2.connect(**DATABASE_CONFIG)
-cur = conn.cursor()
+from config import PROFILE_MODEL_DIR
+from db_utils import database_connection
 
-# Lecture des données
-print("[INFO] Lecture des données...")
-df = pd.read_sql("SELECT * FROM ml_ready_profiles", conn)
-
-# Encoder niveau_etude
-def encoder_niveau_etude(text):
-    if not isinstance(text, str):
-        return 0
-    text = text.lower()
-    if "ing" in text:
-        return 3
-    elif "master" in text or "mba" in text:
-        return 2
-    elif "licence" in text:
-        return 1
-    else:
-        return 0
-
-df["niveau_etude_enc"] = df["schooldegree"].apply(encoder_niveau_etude)
-
-# Vectoriser les skills (TF-IDF)
-print("[INFO] Vectorisation des skills (TF-IDF)...")
-def split_skills(text):
-    return text.split(", ") if isinstance(text, str) else []
-
-vectorizer = TfidfVectorizer(tokenizer=split_skills, max_features=200)
-X_skills = vectorizer.fit_transform(df["skills"].astype(str))
-
-# Sauvegarde du vectorizer
-PROFILE_MODEL_DIR.mkdir(parents=True, exist_ok=True)
-joblib.dump(vectorizer, PROFILE_MODEL_DIR / "skills_vectorizer.joblib")
-
-# Features numériques/encodées
-X_numeric = df[[
+LOGGER = logging.getLogger("coficab.legacy_profiles_training")
+NUMERIC_FEATURES = [
     "jobtitle", "company", "location", "school", "schooldegree",
-    "anneediplome", "nombrestage", "motorise", "annee_experience",
-    "mobilite", "niveau_etude_enc", "profil_senior"
-]]
+    "anneediplome", "motorise", "annee_experience", "mobilite",
+]
+CATEGORICAL_FEATURES = ["niveau_etude"]
+REQUIRED_COLUMNS = set(NUMERIC_FEATURES + CATEGORICAL_FEATURES + ["skills", "recrute"])
 
-# Normalisation
-scaler = StandardScaler()
-X_numeric_scaled = scaler.fit_transform(X_numeric)
-joblib.dump(scaler, PROFILE_MODEL_DIR / "numeric_scaler.joblib")
 
-# Fusion des features finales
-X_final = hstack([csr_matrix(X_numeric_scaled), X_skills])
-y = df["recrute"]
+def split_skills(value: str) -> list[str]:
+    if not isinstance(value, str):
+        return []
+    return [item.strip().casefold() for item in value.split(",") if item.strip()]
 
-# Split train/test
-X_train, X_test, y_train, y_test = train_test_split(
-    X_final, y, test_size=0.2, random_state=42, stratify=y
-)
 
-# Entraînement amélioré du modèle avec paramètres optimisés
-print("[INFO] Entraînement optimisé du RandomForest...")
-model = RandomForestClassifier(
-    n_estimators=200,
-    max_depth=10,
-    min_samples_split=5,
-    min_samples_leaf=2,
-    random_state=42,
-    class_weight='balanced'
-)
-model.fit(X_train, y_train)
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Entraînement expérimental du pipeline historique de profils.")
+    parser.add_argument(
+        "--allow-rule-derived-target",
+        action="store_true",
+        help="Confirmez que vous comprenez que `recrute` est dérivé d'une règle, pas d'un recrutement observé.",
+    )
+    args = parser.parse_args()
+    if not args.allow_rule_derived_target:
+        parser.error(
+            "Entraînement bloqué : la cible historique `recrute` est dérivée du nombre de stages. "
+            "Examinez la cible puis passez --allow-rule-derived-target uniquement pour une expérience pédagogique."
+        )
 
-# Evaluation
-print("[RESULT] Evaluation du modèle :")
-y_pred = model.predict(X_test)
-print(classification_report(y_test, y_pred))
-print("[RESULT] Précision globale :", accuracy_score(y_test, y_pred))
+    with database_connection() as connection:
+        frame = pd.read_sql("SELECT * FROM ml_ready_profiles", connection)
 
-# Sauvegarde du modèle
-joblib.dump(model, PROFILE_MODEL_DIR / "model_rh_optimized.joblib")
-print("[INFO] Modèle sauvegardé sous model_rh_optimized.joblib")
+    if frame.empty:
+        raise ValueError("ml_ready_profiles est vide.")
+    missing = sorted(REQUIRED_COLUMNS - set(frame.columns))
+    if missing:
+        raise ValueError("Colonnes manquantes : " + ", ".join(missing))
 
-# Prédictions
-predictions = model.predict(X_final)
-probas = model.predict_proba(X_final)[:, 1]
-df["prediction"] = predictions
-df["score"] = probas
+    y = pd.to_numeric(frame["recrute"], errors="coerce")
+    if y.isna().any() or set(y.unique()) != {0, 1}:
+        raise ValueError("La cible recrute doit contenir uniquement les classes 0 et 1.")
 
-# ATTENTION : ce script remplace actuellement tous les scores existants.
-# À sécuriser avant une exécution sur des données de production.
-# Nettoyage de la table scored_profiles
-cur.execute("TRUNCATE TABLE scored_profiles;")
+    # `nombrestage` et `profil_senior` sont exclus car ils sont directement utilisés
+    # dans la règle qui crée la cible : les conserver créerait une fuite de cible.
+    X = frame[NUMERIC_FEATURES + CATEGORICAL_FEATURES + ["skills"]].copy()
+    for column in NUMERIC_FEATURES:
+        X[column] = pd.to_numeric(X[column], errors="coerce").fillna(0)
+    for column in CATEGORICAL_FEATURES:
+        X[column] = X[column].fillna("Autre").astype(str)
+    X["skills"] = X["skills"].fillna("").astype(str)
 
-# Lecture des données depuis raw_profiles
-raw_df = pd.read_sql("SELECT id, fullname, jobtitle, company, location, school, schooldegree, nombrestage, motorise FROM raw_profiles", conn)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y.astype(int), test_size=0.2, random_state=42, stratify=y.astype(int)
+    )
+    preprocess = ColumnTransformer(
+        transformers=[
+            ("skills", TfidfVectorizer(tokenizer=split_skills, token_pattern=None, max_features=200), "skills"),
+            ("degree_level", OneHotEncoder(handle_unknown="ignore"), CATEGORICAL_FEATURES),
+            ("numeric", "passthrough", NUMERIC_FEATURES),
+        ],
+        remainder="drop",
+    )
+    pipeline = Pipeline([
+        ("preprocess", preprocess),
+        ("classifier", RandomForestClassifier(
+            n_estimators=200, max_depth=10, min_samples_split=5,
+            min_samples_leaf=2, class_weight="balanced", random_state=42, n_jobs=-1,
+        )),
+    ])
+    pipeline.fit(X_train, y_train)
+    prediction = pipeline.predict(X_test)
 
-# Fusion
-df_merge = pd.merge(df, raw_df, on="id", how="left")
+    metrics = {
+        "accuracy": float(accuracy_score(y_test, prediction)),
+        "precision_positive": float(precision_score(y_test, prediction, zero_division=0)),
+        "recall_positive": float(recall_score(y_test, prediction, zero_division=0)),
+        "f1_positive": float(f1_score(y_test, prediction, zero_division=0)),
+        "classification_report": classification_report(y_test, prediction, output_dict=True, zero_division=0),
+        "train_rows": int(len(y_train)),
+        "test_rows": int(len(y_test)),
+    }
 
-# Insertion dans scored_profiles
-print("[INFO] Insertion dans scored_profiles...")
-for _, row in df_merge.iterrows():
-    cur.execute("""
-        INSERT INTO scored_profiles (
-            id, fullname, jobtitle, company, location, school,
-            schooldegree, nombrestage, motorise, score, model_version, prediction
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """, (
-        int(row["id"]),
-        row["fullname"],
-        row["jobtitle_y"],
-        row["company_y"],
-        row["location_y"],
-        row["school_y"],
-        row["schooldegree_y"],
-        int(row["nombrestage_y"]),
-        row["motorise_y"],
-        float(row["score"]),
-        "v3",
-        int(row["prediction"])
-    ))
+    timestamp = datetime.now(timezone.utc)
+    version = "legacy-candidate-" + timestamp.strftime("%Y%m%dT%H%M%S%fZ")
+    output_dir = PROFILE_MODEL_DIR / "candidates" / version
+    output_dir.mkdir(parents=True, exist_ok=False)
+    joblib.dump(pipeline, output_dir / "model_rh_candidate.joblib")
+    metadata = {
+        "model_name": "coficab_legacy_profiles",
+        "model_version": version,
+        "created_at_utc": timestamp.isoformat(),
+        "target_column": "recrute",
+        "target_semantics": "Rule-derived from nombrestage >= 2; not a verified hiring outcome.",
+        "target_leakage_features_excluded": ["nombrestage", "profil_senior"],
+        "sklearn_version": sklearn.__version__,
+        "dataset_rows": int(len(frame)),
+        "metrics": metrics,
+        "status": "candidate_not_promoted",
+    }
+    (output_dir / "model_metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
 
-conn.commit()
-cur.close()
-conn.close()
+    LOGGER.info("Candidat historique créé : %s", version)
+    LOGGER.warning("Ce modèle est pédagogique uniquement et ne doit pas servir à des décisions de recrutement.")
+    print(f"Artefacts candidats écrits dans : {output_dir}")
 
-print("[INFO] Modèle amélioré entraîné et scores insérés dans scored_profiles.")
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    main()

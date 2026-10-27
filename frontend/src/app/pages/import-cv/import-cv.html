@@ -54,7 +54,7 @@
         </div>
 
         <label class="drop-zone" for="cvFileInput" [class.has-file]="!!fileName">
-          <input #fileInput id="cvFileInput" type="file" accept=".pdf,.doc,.docx" (change)="onFileSelected($event)" />
+          <input #fileInput id="cvFileInput" type="file" accept=".pdf,application/pdf" (change)="onFileSelected($event)" />
           <span class="upload-symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 3v5h5M12 17v-5m-2 2 2-2 2 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           <strong>{{ fileName || 'Sélectionner un CV' }}</strong>
           <span class="drop-description">Cliquez pour parcourir vos fichiers</span>
@@ -135,11 +135,11 @@
       <div class="ai-actions"><button type="button" class="btn-primary" (click)="testerIaProfil()" [disabled]="!critere.poste || isEvaluating"><span *ngIf="!isEvaluating">Lancer l’évaluation IA</span><span *ngIf="isEvaluating">Évaluation en cours…</span><svg *ngIf="!isEvaluating" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.7"/></svg></button></div>
 
       <div class="ai-result" *ngIf="resultatIa">
-        <div class="ai-result-heading"><div><span class="page-eyebrow">RÉSULTAT DU MODÈLE</span><h3>Évaluation du candidat</h3></div><span class="result-status" [class.status-recommended]="resultatIa.recommande" [class.status-not-recommended]="!resultatIa.recommande">{{ resultatIa.recommande ? 'Recommandé' : 'À examiner' }}</span></div>
+        <div class="ai-result-heading"><div><span class="page-eyebrow">RÉSULTAT DU MODÈLE</span><h3>Évaluation du candidat</h3></div><span class="result-status" [class.status-recommended]="resultatIa.recommande" [class.status-not-recommended]="!resultatIa.recommande">{{ resultatIa.recommande ? 'À examiner en priorité' : 'À examiner' }}</span></div>
         <div class="result-summary-grid"><div><span>Nom du candidat</span><strong>{{ cvData?.nom || 'Non précisé' }}</strong></div><div><span>Poste ciblé</span><strong>{{ critere.poste || 'Non précisé' }}</strong></div><div><span>Localisation</span><strong>{{ critere.location || 'Non précisée' }}</strong></div><div><span>Expérience requise</span><strong>{{ critere.experience || 0 }} an(s)</strong></div></div>
-        <div class="ai-score-block"><div class="ai-score-label"><span>Score de correspondance</span><strong>{{ resultatIa.score }}%</strong></div><div class="ai-score-track"><span [style.width.%]="resultatIa.score" [class.score-medium]="resultatIa.score >= 50 && resultatIa.score < 75" [class.score-low]="resultatIa.score < 50"></span></div></div>
+        <div class="ai-score-block"><div class="ai-score-label"><span>Score indicatif du modèle</span><strong>{{ resultatIa.score }}%</strong></div><div class="ai-score-track"><span [style.width.%]="resultatIa.score" [class.score-medium]="resultatIa.score >= 50 && resultatIa.score < 75" [class.score-low]="resultatIa.score < 50"></span></div></div>
         <div class="ai-explanation"><strong>Analyse du modèle</strong><pre>{{ resultatIa.message || 'Aucun commentaire fourni par le modèle.' }}</pre></div>
-        <p class="human-review-note">Cette évaluation est une aide à la décision. La validation finale doit rester sous la responsabilité du recruteur.</p>
+        <p class="human-review-note">Ce score est indicatif et dépend des données utilisées pour entraîner le modèle. Il ne constitue pas une probabilité de recrutement validée. La décision finale appartient au recruteur.</p>
       </div>
     </section>
 

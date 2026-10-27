@@ -1,179 +1,42 @@
+"""CLI d'extraction de CV PDF, basée sur le même service que l'API.
+
+Par confidentialité, le résultat est affiché à l'écran par défaut. L'écriture
+d'un JSON contenant des données personnelles doit être demandée explicitement.
+"""
+from __future__ import annotations
+
 import argparse
-import fitz  # PyMuPDF
-import re
-import os
 import json
 from pathlib import Path
-from config import OUTPUTS_DIR
 
-# === 1. Charger le fichier PDF ===
-parser = argparse.ArgumentParser(description="Extraire les informations d’un CV PDF")
-parser.add_argument("pdf", help="Chemin vers le CV PDF à analyser")
-parser.add_argument("--output", help="Chemin JSON de sortie (optionnel)")
-args = parser.parse_args()
-file_path = args.pdf
-if not os.path.exists(file_path):
-    raise FileNotFoundError(f"Fichier introuvable : {file_path}")
-
-doc = fitz.open(file_path)
-text = ""
-for page in doc:
-    text += page.get_text()
-
-# === 2. Nettoyage du texte ===
-lines = [line.strip() for line in text.split("\n") if line.strip()]
-cleaned_text = " ".join(lines).lower()
-
-# === 3. Extraction des infos personnelles ===
-def extract_email(text):
-    match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", text)
-    return match.group(0) if match else "Non trouvé"
-
-def extract_phone(text):
-    match = re.search(r"\+?\(?\d{2,4}\)?[\s.-]?\d{2,3}[\s.-]?\d{2,3}[\s.-]?\d{2,4}", text)
-    return match.group(0) if match else "Non trouvé"
-
-def extract_name(lines):
-    for line in lines[:10]:
-        # ligne entièrement en majuscules, sans chiffre, et sans mots techniques
-        if line.isupper() and not any(char.isdigit() for char in line):
-            if not any(word in line.lower() for word in ["experience", "education", "skills", "competences", "project"]):
-                return line.strip().title()  # mettre en majuscule initiale
-        # ligne avec 2 mots ayant la première lettre majuscule
-        if re.match(r"[A-Z][a-z]+ [A-Z][a-z]+", line):
-            return line.strip()
-    return "Non trouvé"
+from services.cv_extraction import extract_cv_from_pdf
 
 
-def extract_address(lines):
-    for line in lines:
-        if any(kw in line.lower() for kw in ["cite", "rue", "avenue", "adresse", "tunis"]):
-            return line
-    return "Non trouvé"
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Extraire les informations d'un CV PDF.")
+    parser.add_argument("pdf", type=Path, help="Chemin vers le CV PDF à analyser.")
+    parser.add_argument(
+        "--output", type=Path, default=None,
+        help="Chemin JSON de sortie (optionnel ; le fichier peut contenir des données personnelles).",
+    )
+    args = parser.parse_args()
 
-# === 4. Détection du titre de poste ===
-def extract_job_title(lines):
-    keywords_job = ["data", "engineer", "developer", "devops", "cloud", "ai", "ml", "full stack", "frontend", "backend", "technicien", "ingénieur"]
-    for line in lines[1:10]:
-        if any(kw in line.lower() for kw in keywords_job):
-            return line.strip()
-    return "Non précisé"
+    if not args.pdf.is_file():
+        parser.error(f"Fichier introuvable : {args.pdf}")
 
-def extract_from_filename(path):
-    name = os.path.basename(path).lower()
-    for kw in ["data", "engineer", "ml", "ai", "devops", "fullstack", "frontend", "backend"]:
-        if kw in name:
-            return kw.capitalize()
-    return None
+    try:
+        result = extract_cv_from_pdf(args.pdf.read_bytes())
+    except ValueError as exc:
+        parser.error(str(exc))
 
-# === 5. Extraction des sections textuelles ===
-def extract_section(lines, titles, stops, max_lines=12):
-    section = []
-    capture = False
-    count = 0
-    for line in lines:
-        upper = line.upper()
-        if any(title in upper for title in titles):
-            capture = True
-            continue
-        if capture and (any(stop in upper for stop in stops) or count >= max_lines):
-            break
-        if capture:
-            section.append(line)
-            count += 1
-    return " ".join(section).strip()
-
-# === 6. Bloc compétences ===
-def extract_competence_block(lines):
-    competence_titles = ["COMPÉTENCES", "COMPÉTENCES TECHNIQUES", "SKILLS", "APTITUDES"]
-    stop_titles = ["EXPERIENCE", "PARCOURS", "PROJETS", "FORMATION", "EDUCATION", "LANGUE", "LANGUAGES", "CERTIFICATIONS", "STAGE"]
-    section = []
-    capture = False
-    for line in lines:
-        upper = line.upper()
-        if any(title in upper for title in competence_titles):
-            capture = True
-            section.append(line)
-            continue
-        if capture and any(stop in upper for stop in stop_titles):
-            break
-        if capture:
-            section.append(line)
-    return section
-
-def parse_skills_from_lines(lines):
-    skills = set()
-    for line in lines:
-        parts = re.split(r"[:,;•\-\n]\s*", line)
-        for token in parts:
-            token = token.strip().lower()
-            if 2 <= len(token) <= 40 and not token.isdigit():
-                skills.add(token)
-    skills.discard("compétences")
-    return sorted(skills)
-
-# === 7. Mots-clés techniques (fallback) ===
-tech_keywords = [
-    "python", "java", "c++", "sql", "mysql", "pandas", "spark", "hadoop", "flink",
-    "power bi", "scikit-learn", "matplotlib", "tensorflow", "zookeeper",
-    "linux", "ubuntu", "docker", "talend", "ssh", "excel", "javascript", "html", "css"
-]
-
-def detect_skills(text, keywords):
-    found = set()
-    for kw in keywords:
-        if kw.lower() in text:
-            found.add(kw.lower())
-    return sorted(found)
-
-# === 8. Extractions ===
-nom = extract_name(lines)
-email = extract_email(cleaned_text)
-tel = extract_phone(cleaned_text)
-adresse = extract_address(lines)
-
-job_title = extract_job_title(lines)
-if job_title == "Non précisé":
-    job_title = extract_from_filename(file_path) or "Non précisé"
-
-sections = {
-    "Formation": extract_section(lines, ["FORMATION", "EDUCATION", "DIPLOME"], ["EXPERIENCE", "COMPETENCE", "LANGUE"]),
-    "Expérience": extract_section(lines, ["EXPERIENCE", "STAGE", "WORK", "PARCOURS PROFESSIONNEL"], ["FORMATION", "COMPETENCE", "LANGUE"]),
-    "Langues": extract_section(lines, ["LANGUE", "LANGUAGES", "CERTIFICATIONS"], ["INTERET", "HOBBIES"]),
-    "Centres d’intérêt": extract_section(lines, ["INTERET", "INTERESTS", "HOBBIES"], [""])
-}
-
-competence_lines = extract_competence_block(lines)
-competences_bloc = parse_skills_from_lines(competence_lines)
-competences_detectees = detect_skills(cleaned_text, tech_keywords)
-competences = sorted(set(competences_bloc + competences_detectees))
-
-# === 9. Résultat structuré ===
-extracted_data = {
-    "Nom": nom,
-    "Titre du poste": job_title,
-    "Email": email,
-    "Téléphone": tel,
-    "Adresse": adresse,
-    "Formation": sections["Formation"],
-    "Expérience": sections["Expérience"],
-    "Langues": sections["Langues"],
-    "Centres d’intérêt": sections["Centres d’intérêt"],
-    "Compétences": competences
-}
-
-# === 10. Export JSON ===
-OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
-output_path = Path(args.output) if args.output else OUTPUTS_DIR / "cv_output.json"
-output_path.parent.mkdir(parents=True, exist_ok=True)
-with open(output_path, "w", encoding="utf-8") as f:
-    json.dump(extracted_data, f, indent=2, ensure_ascii=False)
-print(f"\nJSON enregistré : {output_path}")
-
-# === 11. Affichage terminal ===
-for k, v in extracted_data.items():
-    print(f"\n== {k} ==")
-    if isinstance(v, list):
-        print(", ".join(v))
+    serialized = json.dumps(result, indent=2, ensure_ascii=False)
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(serialized, encoding="utf-8")
+        print(f"Résultat enregistré : {args.output}")
     else:
-        print(v)
+        print(serialized)
+
+
+if __name__ == "__main__":
+    main()
